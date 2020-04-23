@@ -133,7 +133,7 @@ def make_user_mark(tag):
         return False
     try:
         get_var_from_file(filepath,vartoget)
-        if not vartoget["marking complete"]=='0':
+        if vartoget["marking complete"]=='1':
             return True
     except: pass
     return False
