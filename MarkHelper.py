@@ -88,22 +88,22 @@ def declare_marked(tag):
 #make given substitutions using process_markup_line
 def make_from_template(file, subs={}):
     with open(config['template'], 'r') as template:
-        for line in template:
-            file.write(mhu.process_markup_line(line,subs))
+        lines=template.readlines()
+        out_lines=mhu.process_lines(lines,subs)
+        file.writelines(out_lines)
 
-def reset_vars_in_file(path, vartoset):
-    lines=[]
+def reset_file(path):
+    out_lines=[]
     with open(path,'r') as file:
-        for line in file:
-            lines.append(mhu.process_markup_line(line,{},{},vartoset))
+        lines=file.readlines()
+        out_lines=mhu.process_lines(lines,{'reset':''})
     with open(path,'w') as file:
-        for line in lines:
-            file.write(line)
+        file.writelines(out_lines)
             
 def get_var_from_file(path,vartoget):#initialise values in vartoget from commands in file
     with open(path,'r') as file:
-        for line in file:
-            mhu.process_markup_line(line,{},vartoget)
+        lines=file.readlines()
+        mhu.process_lines(lines,vartoget)
 
 def get_marked_path():
     return os.path.join(script_directory,"marked")
@@ -118,12 +118,15 @@ def make_user_mark(tag):
         os.mkdir(filedir)
     #file to create/edit
     filepath=os.path.join(filedir,tag+config["marked suffix"])
-    vartoget={'marking complete':'0'}
+    vartoget={'marking_complete':'0', 'assert':'1'}
     try:#file exists, ake sure it requires user editing before acceptance
-        reset_vars_in_file(filepath,vartoget)
+        reset_file(filepath)
     except:#create new file
-        with open(filepath,'w') as file:
-            make_from_template(file,subs={'tag':'../'+tag})
+        try:
+            with open(filepath,'w') as file:
+                make_from_template(file,subs={'tag':'../'+tag})
+        except:
+            print("Failed to create new file at: {}".format(filepath))
             
     try:
         proc=sp.Popen([config['editor'],filepath])
@@ -133,7 +136,7 @@ def make_user_mark(tag):
         return False
     try:
         get_var_from_file(filepath,vartoget)
-        if vartoget["marking complete"]=='1':
+        if vartoget["marking_complete"]=='1' and vartoget['assert']=='1':
             return True
     except: pass
     return False
@@ -173,7 +176,11 @@ def cmd_begin(args):#begin marking
     quit_flag=False
     while not quit_flag:
         print("Checking marking state...")
-        check_marking_state()#initialize to_mark from given script directory
+        try:
+            check_marking_state()#initialize to_mark from given script directory
+        except:
+            print("Failed to update marking state!")
+            return True
         if to_mark=={}:
             print("Marking complete!")# Use \'review\' to check marked documents.")#TODO: implement this
             break

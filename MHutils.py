@@ -150,6 +150,7 @@ def cmd_echo_thisline(toks,
     try:
         num=int(interpret(toks,1,
                        lines, cur_line, out_lines, variables)[0])
+    except ParseError: raise
     except:raise ParseError("Missing numerical argument for \\k")
     for n in range(num):
         out_lines.append(lines[cur_line][:])
@@ -166,6 +167,7 @@ def cmd_delnxtline(toks,
     try:
         num=int(interpret(toks,1,
                        lines, cur_line, out_lines, variables)[0])
+    except ParseError: raise
     except:raise ParseError("Missing numerical argument for \\skip")
     try:
         for n in range(num):
@@ -183,9 +185,10 @@ def cmd_echo(toks,lines, cur_line, out_lines, variables):
     try:
         num=int(interpret(toks,1,
                        lines, cur_line, out_lines, variables)[0])
+    except ParseError: raise
     except:raise ParseError("Missing numerical argument for \\echo")
     text=interpret(toks,1,
-                       lines, cur_line, out_lines, variables)[0]
+                       lines, cur_line, out_lines, variables)[0]+"\n"
     for n in range(num):
         out_lines.append(text)
     return interpret(toks,1,
@@ -200,6 +203,7 @@ def cmd_concat(toks,lines, cur_line, out_lines, variables):
         vals=interpret(toks,2,
                            lines, cur_line, out_lines, variables)
         return vals[0]+vals[1]
+    except ParseError: raise
     except:
         raise ParseError("Concatenation failed!")
 
@@ -212,6 +216,7 @@ def cmd_and(toks,lines, cur_line, out_lines, variables):
         vals=interpret(toks,2,
                            lines, cur_line, out_lines, variables)
         return str(int(vals[0]=='1' and vals[1]=='1'))
+    except ParseError: raise
     except:
         raise ParseError("Boolean \'and\' failed!")
         
@@ -224,6 +229,7 @@ def cmd_not(toks,lines, cur_line, out_lines, variables):
         vals=interpret(toks,1,
                            lines, cur_line, out_lines, variables)
         return str(int(not vals[0]=='1' ))
+    except ParseError: raise
     except:
         raise ParseError("Boolean \'not\' failed!")
 
@@ -236,6 +242,7 @@ def cmd_or(toks,lines, cur_line, out_lines, variables):
         vals=interpret(toks,2,
                            lines, cur_line, out_lines, variables)
         return str(int(vals[0]=='1' or vals[1]=='1'))
+    except ParseError: raise
     except:
         raise ParseError("Boolean \'or\' failed!")
         
@@ -243,13 +250,14 @@ def cmd_or(toks,lines, cur_line, out_lines, variables):
 return '1' if following line matches regex given in next token. else '0' 
 '''
 def cmd_assert_regex(toks,lines, cur_line, out_lines, variables):
+    regex=''
     try:
-        vals=interpret(toks,1,
-                           lines, cur_line, out_lines, variables)
-        return str(int(len(re.findall(vals[0],lines[cur_line+1]))>0))
+        regex=interpret(toks,1,
+                           lines, cur_line, out_lines, variables)[0]
+        return str(int(len(re.findall(regex,lines[cur_line+1]))>0))
+    except ParseError: raise
     except:
-        raise#debug
-        #raise ParseError("Invalid/missing regex or missing line below!")
+        raise ParseError("Invalid/missing regex or missing line below! Regex = {}".format(regex))
     
 #k for keep
 #
@@ -323,7 +331,8 @@ if __name__=='__main__':
     print(process_lines(lines,varis))
     print(varis['re'])
         
-
+    with open('junk.txt','w') as file:
+        file.writelines(["\n","a\n","\n","\\b"])
         
         
 '''

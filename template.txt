@@ -1,2 +1,13 @@
-%#tag#%
-%#marking complete=0#%
+%#tag=\echo 1 tag tag
+%#reset=\k 1 \skip 1 \echo 1 '%#marking_complete=\\k 1 0 % modify the 0 in this line' reset %don't modify this line
+%#marking_complete=\k 1 0 % modify the 0 in this line
+
+\documentclass{article}
+
+%#assert=\k 1 \&& assert \!! \regex '\\\\usepackage\\[.*\\bgrid\\b.*\\]' %don't modify this line
+%#tag=\echo 1 \+ '\\usepackage[source =' \+ tag ', grid]{markpage}%use option flag "grid" to show grid' tag
+
+
+\begin{document}
+Hi
+\end{document}
