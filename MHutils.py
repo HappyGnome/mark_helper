@@ -24,10 +24,10 @@ def hash_file_list(files, directory=''):
 #return line with substitutions made
 #Commandsin the line  must be enclosed by %# and #%, if the content matches
     #key in sub then value of sub is substituted
-    #if command is key=... and key is in vartoset then that key is set to 
+    #if command is key=... and key is in vartoget then that vartoget[key] is set to 
     #what follows '='(before #%)
-    #if syntax for vartoset is used and key appears in vartoreset, then
-    #the command syntax is replaced in the output by a command %#key=vartoreset[key]#%
+    #if key=... is used and key appears in vartoset, then
+    #the command syntax is replaced in the output by a command %#key=vartoset[key]#%
     #setting commands  are stripped from the returned line
     #unmatched commands are left in the returned line
 def process_markup_line(line, sub={}, vartoget={}, vartoset={}):
