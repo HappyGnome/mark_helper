@@ -26,22 +26,26 @@ config={"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
         "marked suffix":"_marked.tex", "output suffix":"_marked.pdf",\
         "output viewer":"C:\Program Files\SumatraPDF\sumatrapdf.exe"}
 
-script_directory=""#path containing script pdfs
+#script_directory=""#path containing script pdfs
 
-to_mark={}#list of files to mark. See mkh entry format.
+#to_mark={}#list of files to mark. See mkh entry format.
 
-#mkh is a json file containing list of {tag:[filenames,hash]}
+#mkh is a json file containing list of [filenames,hash,questions]
 #tag = filename prefix of marked files
 #filenames is the list of file paths corresponding to the tag
 #hash is a hash value of those files at the time they were deemed marked
+#questions={'question':'mark'} for questions asserted as marked
 '''
 check source directory for files or file sets,
 check which .mkh files exist and are up to date
-set to_mark to list of scripts left to mark
+
+if questions is set to a list of question names
+then any scripts which have not had all of those questions marked will be returned
+
+return to_mark: list of scripts left to mark
 '''
-def check_marking_state():
+def check_marking_state(script_directory,questions=[]):
     to_mark_temp={}
-    global to_mark
     to_mark={}
     
     script_files_raw=os.listdir(script_directory)
@@ -59,72 +63,121 @@ def check_marking_state():
             cur_entry=to_mark_temp[tag]
             cur_entry[0].append(s+'.pdf')
         else:
-            to_mark_temp[tag]=[[s+'.pdf'],'']#hash computed later    
+            to_mark_temp[tag]=[[s+'.pdf'],'',{}]#hash computed later    
     
     for t in to_mark_temp:
         files_hash=mhu.hash_file_list(to_mark_temp[t][0], script_directory)
-        marked=False
+        marked=False#file exists and all questions marked?
         #check for matching .mkh file
         if t+'.mkh' in script_files_raw:
             try:
                 with open(os.path.join(script_directory,t+".mkh"),"r") as mkh:
                     mkh_data=json.load(mkh)
-                    if mkh_data==[to_mark_temp[t][0],files_hash]:
+                    if mkh_data[:2]==[to_mark_temp[t][0],files_hash]:
                         marked=True
+                        for q in questions:#make sure all questions marked too
+                            if q not in mkh_data[2]:
+                                marked=False
+                                break
             except:pass
         #add to to_mark
         if not marked:
-            to_mark[t]=[to_mark_temp[t][0],files_hash]
+            to_mark[t]=to_mark_temp[t]
+            to_mark[t][1]=files_hash
+    return to_mark
 
 '''
 call when marking of script with given tag deemed complete.
 Create/update associated mkh file
+
+tag=internal tag of script
+script_directory= ...
+to_mark=dictionary of mkh entry data for current doc list (tag is a key for this)
 '''
-def declare_marked(tag):
+def declare_marked(tag, script_directory, to_mark):
     with open(os.path.join(script_directory,tag+".mkh"),"w") as mkh:
         json.dump(to_mark[tag],mkh)
     
-#print template text to the given file (open for writing)
+'''
+#print template text to the path
 #make given substitutions using process_markup_line
-def make_from_template(file, subs={}):
-    with open(config['template'], 'r') as template:
-        lines=template.readlines()
-        out_lines=mhu.process_lines(lines,subs)
-        file.writelines(out_lines)
+#ARGUMENTS PASSED TO FILE: "_in_path" - prefix of path(s) of document(s) to mark, 
+#"_#pages" - number of pages in document
+#"_init" - flag indicating initial file construction
+'''
+def make_from_template(file_path, script_base_path, page_count):
+    mhu.process_file(config['template'],file_path,
+                     {"_in_path":script_base_path,"_#pages":str(page_count), "_init":"1"})
 
-def reset_file(path):
-    out_lines=[]
-    with open(path,'r') as file:
-        lines=file.readlines()
-        out_lines=mhu.process_lines(lines,{'reset':''})
-    with open(path,'w') as file:
-        file.writelines(out_lines)
+'''
+Open file at path, process with mhu and save back to same path
+#ARGUMENTS PASSED TO FILE: "_final_assert_reset" - flag indicating file should be set up
+for final assert 
+'''
+def reset_file_final_check(path):
+    mhu.process_file(path,path,{"_final_assert_reset":"1"})
             
-def get_var_from_file(path,vartoget):#initialise values in vartoget from commands in file
-    with open(path,'r') as file:
-        lines=file.readlines()
-        mhu.process_lines(lines,vartoget)
+'''
+Open file at path, process with mhu and save back to same path
+#ARGUMENTS PASSED TO FILE: "_final_assert" - flag initially ='0' that should
+be '1' after parsing file iff the file should be reported as marked
 
-def get_marked_path():
-    return os.path.join(script_directory,"marked")
+returns True iff assert succeeds
+'''
+def do_file_final_check(path):
+    var={"_final_assert":"0"}
+    mhu.process_file(path,path,var)
+    return var["_final_assert"]=="1"
+
+'''
+Open file at path, process with mhu and save back to same path
+#ARGUMENTS PASSED TO FILE: "_question_reset" - flag indicating file should be set up
+for marking a question
+"_question_name" - name of the question e.g. '3a'
+'''
+def reset_file_q(path,question_name):
+    mhu.process_file(path,path,{"_question_reset":"1", "_question_name":question_name})
+    
+'''
+Open file at path, process with mhu and save back to same path
+#ARGUMENTS PASSED TO FILE:
+"_question_mark" - should be set to mark for completed question
+"_question_name" - name of the question being extracted e.g. '3a'
+"_question_assert" - set to 1 to report marking validated for final question
+
+N.B. the assert will be set to fail if _question_mark =''
+
+return [marked, score]
+marked is boolean indicating value of assert
+score is the string representing the score
+'''
+def do_file_q_check(path,question_name):
+    var={"_question_mark":"", "_question_assert":"0","_question_name":question_name}
+    mhu.process_file(path,path,var)
+    marked=var["_question_assert"]=="1" and var["_question_mark"]
+    return [marked, var["_question_mark"]]
+    
+#return path for marked files relative to script directory
+def get_marked_path(script_dir):
+    return os.path.join(script_dir,"marked")
     
 #prepare blank file for user to mark, based on teplate
 #open it in the editor
-#when editor closes check that the job is done
+#when editor closes check that the job is done (all listed questions reported 
+#           marked and marks available)
+#if final_validate==True then also check that file passes final 'all-marked' checks
 #return true on completed job
-def make_user_mark(tag):
+def make_user_mark(tag, questions=[], final_validate=True):
     filedir=get_marked_path()
     if not os.path.isdir(filedir):#create directory if necessary
         os.mkdir(filedir)
     #file to create/edit
     filepath=os.path.join(filedir,tag+config["marked suffix"])
-    vartoget={'marking_complete':'0', 'assert':'1'}
-    try:#file exists, ake sure it requires user editing before acceptance
-        reset_file(filepath)
+    try:#file exists, make sure it requires user editing before acceptance
+        reset_file_final_check(filepath)
     except:#create new file
         try:
-            with open(filepath,'w') as file:
-                make_from_template(file,subs={'tag':'../'+tag})
+            make_from_template(filepath,'../'+tag,)#TODO
         except:
             print("Failed to create new file at: {}".format(filepath))
             
@@ -199,6 +252,7 @@ def cmd_begin(args):#begin marking
                     break    
      
     return True
+'''
 def cmd_declare_marked(args):#declare a script as marked (mostly diagnostic use)
     tag=input("Tag for file(s) confirmed marked: ")
     if tag not in to_mark:
@@ -211,6 +265,7 @@ def cmd_declare_marked(args):#declare a script as marked (mostly diagnostic use)
     else: declare_marked(tag)
     
     return True
+    '''
 '''
 *******************************************************************************
 *******************************************************************************
@@ -218,8 +273,7 @@ Main CLI cmd parser
 
 return False to terminate main loop
 '''
-handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin,
-          "declare":cmd_declare_marked}# "del":cmdDel, ""}#define handlers
+handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin}#define handlers
 def parse_cmd(cmd):
     toks=cmd.split()
     if len(toks)==0: return True#basic checks
