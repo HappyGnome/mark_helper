@@ -11,6 +11,7 @@ import sys
 import MHutils as mhu
 import os
 import subprocess as sp
+import PyPDF2 as ppdf
 
 #Look for files / sets of files to mark
 #check .mkh file (create if needed)
@@ -30,11 +31,12 @@ config={"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
 
 #to_mark={}#list of files to mark. See mkh entry format.
 
-#mkh is a json file containing list of [filenames,hash,questions]
+#mkh is a json file containing list of [filenames,hash,questions,final_valid]
 #tag = filename prefix of marked files
 #filenames is the list of file paths corresponding to the tag
 #hash is a hash value of those files at the time they were deemed marked
 #questions={'question':'mark'} for questions asserted as marked
+#final_valid is set true when file set passes a final validation check
 '''
 check source directory for files or file sets,
 check which .mkh files exist and are up to date
@@ -42,9 +44,12 @@ check which .mkh files exist and are up to date
 if questions is set to a list of question names
 then any scripts which have not had all of those questions marked will be returned
 
-return to_mark: list of scripts left to mark
+if final_assert=True then any file that has not passed final validation 
+will also be included
+
+return to_mark: list of scripts left to mark in mkh format
 '''
-def check_marking_state(script_directory,questions=[]):
+def check_marking_state(script_directory,questions=[], final_assert=True):
     to_mark_temp={}
     to_mark={}
     
@@ -63,7 +68,7 @@ def check_marking_state(script_directory,questions=[]):
             cur_entry=to_mark_temp[tag]
             cur_entry[0].append(s+'.pdf')
         else:
-            to_mark_temp[tag]=[[s+'.pdf'],'',{}]#hash computed later    
+            to_mark_temp[tag]=[[s+'.pdf'],'',{},False]#hash computed later    
     
     for t in to_mark_temp:
         files_hash=mhu.hash_file_list(to_mark_temp[t][0], script_directory)
@@ -74,7 +79,7 @@ def check_marking_state(script_directory,questions=[]):
                 with open(os.path.join(script_directory,t+".mkh"),"r") as mkh:
                     mkh_data=json.load(mkh)
                     if mkh_data[:2]==[to_mark_temp[t][0],files_hash]:
-                        marked=True
+                        marked=mkh_data[3] or not final_assert
                         for q in questions:#make sure all questions marked too
                             if q not in mkh_data[2]:
                                 marked=False
@@ -87,7 +92,47 @@ def check_marking_state(script_directory,questions=[]):
     return to_mark
 
 '''
-call when marking of script with given tag deemed complete.
+Do extra checks on timestamps for source (e.g. latex) file and final pdf output
+(If source has been modified since last compilation then latest changes may not 
+be reflected) 
+
+Return False if modification dates are in the wrong order
+'''
+def check_mod_timestamps(source_path,final_path):
+    try:
+        src_stat=os.stat(source_path)
+        fin_stat=os.stat(final_path)
+        #print("{} {}".format(src_stat.st_mtime,fin_stat.st_mtime))#debug
+        return src_stat.st_mtime<=fin_stat.st_mtime
+        
+    except:
+        return False
+
+'''
+Do extra checks on page counts 
+
+return False if number of pages in all files listed in the list
+input_file_paths does not match the page count in pdf_path (or if a file cannot be
+read)
+'''
+def check_page_counts(input_pdf_paths,output_pdf_path):
+    return count_pdf_pages(input_pdf_paths)==count_pdf_pages([output_pdf_path])
+'''
+given a list of file paths (all pdfs) sum the numbers of pages in those files 
+
+return number of pages found
+'''
+def count_pdf_pages(file_paths):
+    pages=0
+    for f in file_paths:
+        try:
+            reader=ppdf.PdfFileReader(f)
+            pages+=reader.getNumPages()
+        except:
+            print("Could not count pages in {}".format(f))
+    return pages
+'''
+call when marking of script with given tag deemed complete/partially complete.
 Create/update associated mkh file
 
 tag=internal tag of script
@@ -156,6 +201,9 @@ def do_file_q_check(path,question_name):
     mhu.process_file(path,path,var)
     marked=var["_question_assert"]=="1" and var["_question_mark"]
     return [marked, var["_question_mark"]]
+
+
+
     
 #return path for marked files relative to script directory
 def get_marked_path(script_dir):
@@ -166,33 +214,67 @@ def get_marked_path(script_dir):
 #when editor closes check that the job is done (all listed questions reported 
 #           marked and marks available)
 #if final_validate==True then also check that file passes final 'all-marked' checks
-#return true on completed job
-def make_user_mark(tag, questions=[], final_validate=True):
-    filedir=get_marked_path()
+#return [marks,success] where marks={name:mark} for all questions validly marked
+#and success=False only if final_validate==True and validation fails, or if 
+#one of the requested questions fails validation
+def make_user_mark(tag, to_mark,script_directory, questions=[], final_validate=True):
+    filedir=get_marked_path(script_directory)
     if not os.path.isdir(filedir):#create directory if necessary
         os.mkdir(filedir)
     #file to create/edit
     filepath=os.path.join(filedir,tag+config["marked suffix"])
-    try:#file exists, make sure it requires user editing before acceptance
-        reset_file_final_check(filepath)
+    try:#check file exists
+        with open(filepath,'r'):pass
     except:#create new file
         try:
-            make_from_template(filepath,'../'+tag,)#TODO
+            make_from_template(filepath,'../'+tag,
+                               count_pdf_pages([os.path.join(script_directory,p) for p in to_mark[tag][0]]))
         except:
             print("Failed to create new file at: {}".format(filepath))
-            
+        
     try:
+        #reset all variables to inspect later
+        for q in questions:
+            try:
+                reset_file_q(filepath,q)
+            except:
+                print("Failed to reset question {} in {}".format(q,filepath))
+        if final_validate:
+            try:
+                reset_file_final_check(filepath)
+            except: print("Failed to reset master assert in {}".format(filepath))
+        
         proc=sp.Popen([config['editor'],filepath])
         proc.wait()
     except:
         print("Error occurred editing document. Check that the correct appliction is selected.")
-        return False
-    try:
-        get_var_from_file(filepath,vartoget)
-        if vartoget["marking_complete"]=='1' and vartoget['assert']=='1':
-            return True
-    except: pass
-    return False
+    finally:#check state of resulting file (must be called as counterpart to each reset)
+        ret=[{},True]
+        if final_validate:
+            try:
+                final_path=os.path.join(filedir,tag+config["output suffix"])
+                if not check_mod_timestamps(filepath,final_path):#do this first or timestamps change
+                    ret[1]=False
+                    print("Remember to compile after saving!")
+                elif not check_page_counts([os.path.join(script_directory,p) for p in to_mark[tag][0]]\
+                    ,final_path):
+                    print("Warning: page count in {} doesn't match input.".format(final_path))
+                ret[1]=ret[1] and do_file_final_check(filepath)
+            except: 
+                print("Failed to perform master assert in {}".format(filepath))
+                ret[1]=False
+        #inspect selected variables
+        for q in questions:
+            try:
+                marked,score=do_file_q_check(filepath,q)
+                if marked:
+                    ret[0][q]=score
+                else: ret[1]=False
+            except:
+                print("Failed to extract data for question {} in {}".format(q,filepath))
+                ret[1]=False
+
+        return ret
     
     
     
@@ -226,11 +308,20 @@ def cmd_begin(args):#begin marking
     global script_directory
     script_directory=input("Folder of scripts: ")
     
+    inp=input("Questions to mark (separated by spaces): ")
+    question_names=inp.split()
+    
+    final_validate=input("Do final validation of marking? [y/n]: ") in ["y","Y"]
+    '''all_qs=[]#all question names required in after this pass to pass validation 
+    if final_validate:
+        inp=input("Questions required for final validation (separated by spaces): ")
+        all_qs=inp.split()'''
+    
     quit_flag=False
     while not quit_flag:
         print("Checking marking state...")
         try:
-            check_marking_state()#initialize to_mark from given script directory
+            to_mark=check_marking_state(script_directory,question_names,final_validate)#initialize to_mark from given script directory
         except:
             print("Failed to update marking state!")
             return True
@@ -239,17 +330,34 @@ def cmd_begin(args):#begin marking
             break
         for tag in to_mark:
             print("Now marking "+tag)
-            while not make_user_mark(tag):
-                selection=input("Marking of "+tag+" not complete. Continue? (\'q\' to quit): ")
-                quit_flag=selection in ['q','Q']
-                if quit_flag: break
+            marks_done={}#questions already marked for this script this pass
+            while True:
+                
+                marks,marked=make_user_mark(tag,to_mark,script_directory,[q for q  in question_names if not q in marks_done],final_validate)
+                #record scores in to_mark
+                to_mark[tag][2].update(marks)
+                marks_done.update(marks)
+                
+                #check final validation
+                '''all_marked=True
+                if final_validate:#check all required marks available
+                    for q in all_qs:
+                        if not q in to_mark[tag][2]:
+                            all_marked=False
+                            print("Warning: question {} not marked!".format(q))'''
+                #check also validation verdict from make_user_mark
+                to_mark[tag][3]=marked and final_validate# and all_marked#if it's already True, reset it if not final_validate
+                if marked:break#all done for this script
+                else:
+                    selection=input("Marking of "+tag+" not complete. Continue? (\'q\' to quit, \'s\' to skip this file): ")
+                    quit_flag=selection in ['q','Q']
+                    if quit_flag or selection in ['s','S']: break
+            declare_marked(tag,script_directory,to_mark)#update marking state in file
             if quit_flag: break
-            else:#make_user_mark returned true
-                declare_marked(tag)
-                selection=input("Continue? (\'q\' to quit): ")
-                if selection in ['q','Q']:
-                    quit_flag=True
-                    break    
+            selection=input("Continue? (\'q\' to quit): ")
+            if selection in ['q','Q']:
+                quit_flag=True
+                break    
      
     return True
 '''

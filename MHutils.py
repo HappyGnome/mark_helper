@@ -128,7 +128,8 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
         try:                        
             tok=toks.pop(0)
             val=tok[0]
-        except: raise ParseError("Not enough tokens!")
+        except: 
+            raise ParseError("Not enough tokens!")
         if tok[1]=='command':
             val=command_list[tok[0]](toks,
                        lines, cur_line, out_lines, variables)
@@ -138,7 +139,7 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
             try:
                 val=variables[tok[0]]
             except: pass
-        if val:
+        if not val==None:
             ret.append(val)
     return ret
 '''
@@ -154,7 +155,7 @@ def cmd_echo_thisline(toks,
                        lines, cur_line, out_lines, variables):
     
     out_lines.append(lines[cur_line][:])
-    return '' #interpret(toks,1, lines, cur_line, out_lines, variables)[0]
+    return None #interpret(toks,1, lines, cur_line, out_lines, variables)[0]
     
 '''
 command remove next line from input and returns no token
@@ -165,17 +166,17 @@ def cmd_delnxtline(toks,
     try:
         lines.pop(cur_line+1)
     except:pass
-    return ''#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
+    return None#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
     
 '''
-command to add line to output and return evaluation of remaining
+command to add line to output and return no token
 \echo <text>
 '''
 def cmd_echo(toks,lines, cur_line, out_lines, variables):
     text=interpret(toks,1,
                        lines, cur_line, out_lines, variables)[0]+"\n"
     out_lines.append(text)
-    return ''#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
+    return None#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
     
 '''
 command to concatenate two tokens
@@ -191,17 +192,30 @@ def cmd_concat(toks,lines, cur_line, out_lines, variables):
         raise ParseError("Concatenation failed!")
         
 '''
-command to interpret next two tokens as numbers and add them
+command to interpret next two tokens as float numbers and add them
 \+f <str1> <str2>
 '''
-def cmd_add(toks,lines, cur_line, out_lines, variables):
+def cmd_addf(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,2,
                            lines, cur_line, out_lines, variables)
         return str(float(vals[0])+float(vals[1]))
     except ParseError: raise
     except:
-        raise ParseError("Concatenation failed!")
+        raise ParseError("Addition failed!")
+        
+'''
+command to interpret next two tokens as int numbers and add them
+\+d <str1> <str2>
+'''
+def cmd_addd(toks,lines, cur_line, out_lines, variables):
+    try:
+        vals=interpret(toks,2,
+                           lines, cur_line, out_lines, variables)
+        return str(int(vals[0])+int(vals[1]))
+    except ParseError: raise
+    except:
+        raise ParseError("Addition failed!")
 
 '''
 return '1' or '0' corresponding to boolean and of next two tokens
@@ -243,6 +257,18 @@ def cmd_or(toks,lines, cur_line, out_lines, variables):
         raise ParseError("Boolean \'or\' failed!")
         
 '''
+return '1' or '0' corresponding to whether the following two tokens agree
+'''        
+def cmd_eqq(toks,lines, cur_line, out_lines, variables):
+    try:
+        vals=interpret(toks,2,
+                           lines, cur_line, out_lines, variables)
+        return str(int(vals[0]==vals[1]))
+    except ParseError: raise
+    except:
+        raise ParseError("\'==\' failed!")
+        
+'''
 return '1' if following line matches regex given in next token. else '0' 
 '''
 def cmd_assert_regex(toks,lines, cur_line, out_lines, variables):
@@ -268,7 +294,7 @@ def cmd_set_var(toks,lines, cur_line, out_lines, variables):
     except:
         raise ParseError("Could not set variable!")
     
-    return ''
+    return None
 
 '''
 returns the current length of out_lines as a string
@@ -288,7 +314,7 @@ def cmd_echo_at(toks,lines, cur_line, out_lines, variables):
     except ParseError: raise
     except:
         raise ParseError("Echo_at failed. Check line numbers are valid")
-    return ''
+    return None
 
 '''
 \r <num repeats> ...
@@ -311,7 +337,7 @@ def cmd_repeat(toks,lines, cur_line, out_lines, variables):
         toks_bkp=toks[:]
         interpret(toks_bkp,1,lines, cur_line, out_lines, variables)
     toks[:]=toks_bkp
-    return ''
+    return None
 '''
 Interpret next token, then attempt to interpret two more (or catch IfStops)
 if first token =='1' then first of the two results (incl changes to arguments)
@@ -347,6 +373,8 @@ def cmd_if(toks,lines, cur_line, out_lines, variables):
 #signify end of if/else block without returning token
 def cmd_endif(toks,lines, cur_line, out_lines, variables):
     raise IfStop()
+    
+
 
 def assert_valid_varname(name):
     if "=" in name or len(name.split())!=1: raise ParseError("\'{}\' is invalid variable name!".format(name))
@@ -355,8 +383,9 @@ def assert_valid_varname(name):
 command_list={'k': cmd_echo_thisline, 'skip':cmd_delnxtline, 
               'echo':cmd_echo, '+':cmd_concat, 
               "&&":cmd_and, "||":cmd_or, "!!":cmd_not, "regex":cmd_assert_regex,
-              '+f':cmd_add,'#ol':cmd_the_out_line, 'echo@':cmd_echo_at ,
-              'r':cmd_repeat,'set':cmd_set_var, 'if':cmd_if, 'endif':cmd_endif}
+              '+f':cmd_addf,'+d':cmd_addd,'#ol':cmd_the_out_line, 'echo@':cmd_echo_at ,
+              'r':cmd_repeat,'set':cmd_set_var, 'if':cmd_if, 'endif':cmd_endif,
+              '==':cmd_eqq}
 
 #process list of lines
 #any starting with '%#' will be tokenized and interpreted using variable list given
@@ -442,9 +471,10 @@ if __name__=='__main__':
         
     with open('junk.txt','w') as file:
         file.writelines(["\n","a\n","\n","\\b"])
-    '''  
-    process_file('junk_in.txt','junk_out.txt',{'_do':'1'})
-        
+    ''' 
+    var={'_do':'0'}
+    process_file('junk_in.txt','junk_out.txt',var)
+    print(var)   
 '''
 ###############################################################################
 ###############################################################################
