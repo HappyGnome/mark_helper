@@ -25,7 +25,7 @@ import PyPDF2 as ppdf
 #load config or create it
 config={"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
         "marked suffix":"_marked.tex", "output suffix":"_marked.pdf",\
-        "output viewer":"C:\Program Files\SumatraPDF\sumatrapdf.exe"}
+        "script_dir":"ToMark","output viewer":"C:\Program Files\SumatraPDF\sumatrapdf.exe"}
 
 #script_directory=""#path containing script pdfs
 
@@ -47,11 +47,14 @@ then any scripts which have not had all of those questions marked will be return
 if final_assert=True then any file that has not passed final validation 
 will also be included
 
-return to_mark: list of scripts left to mark in mkh format
+return [to_mark,done_mark]: lists of scripts left to mark and marked in mkh format
+(A script is 'marked' in this case if all requested questions are available 
+and final validation reported complete, if final_assert==True)
 '''
 def check_marking_state(script_directory,questions=[], final_assert=True):
     to_mark_temp={}
     to_mark={}
+    done_mark={}#valid script sets with requested questions marked
     
     script_files_raw=os.listdir(script_directory)
     #extract only pdfs and strip '.pdf'
@@ -65,8 +68,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True):
             if  s[sep_ind+1:].isnumeric():
                 tag=s[:sep_ind]
         if tag in to_mark_temp:
-            cur_entry=to_mark_temp[tag]
-            cur_entry[0].append(s+'.pdf')
+            to_mark_temp[tag][0].append(s+'.pdf')
         else:
             to_mark_temp[tag]=[[s+'.pdf'],'',{},False]#hash computed later    
     
@@ -78,7 +80,8 @@ def check_marking_state(script_directory,questions=[], final_assert=True):
             try:
                 with open(os.path.join(script_directory,t+".mkh"),"r") as mkh:
                     mkh_data=json.load(mkh)
-                    if mkh_data[:2]==[to_mark_temp[t][0],files_hash]:
+                    to_mark_temp[t][2:]=mkh_data[2:]#extract non-hash,non-path data
+                    if mkh_data[:2]==[to_mark_temp[t][0],files_hash]:#if hashes don't match it's not marked!
                         marked=mkh_data[3] or not final_assert
                         for q in questions:#make sure all questions marked too
                             if q not in mkh_data[2]:
@@ -89,7 +92,10 @@ def check_marking_state(script_directory,questions=[], final_assert=True):
         if not marked:
             to_mark[t]=to_mark_temp[t]
             to_mark[t][1]=files_hash
-    return to_mark
+        else:
+            done_mark[t]=to_mark_temp[t]
+            done_mark[t][1]=files_hash
+    return [to_mark,done_mark]
 
 '''
 Do extra checks on timestamps for source (e.g. latex) file and final pdf output
@@ -232,24 +238,24 @@ def make_user_mark(tag, to_mark,script_directory, questions=[], final_validate=T
         except:
             print("Failed to create new file at: {}".format(filepath))
         
-    try:
-        #reset all variables to inspect later
-        for q in questions:
-            try:
-                reset_file_q(filepath,q)
-            except:
-                print("Failed to reset question {} in {}".format(q,filepath))
-        if final_validate:
-            try:
-                reset_file_final_check(filepath)
-            except: print("Failed to reset master assert in {}".format(filepath))
-        
+
+    #reset all variables to inspect later
+    for q in questions:
+        try:
+            reset_file_q(filepath,q)
+        except:
+            print("Failed to reset question {} in {}".format(q,filepath))
+    if final_validate:
+        try:
+            reset_file_final_check(filepath)
+        except: print("Failed to reset master assert in {}".format(filepath))
+    try:   
         proc=sp.Popen([config['editor'],filepath])
         proc.wait()
     except:
         print("Error occurred editing document. Check that the correct appliction is selected.")
     finally:#check state of resulting file (must be called as counterpart to each reset)
-        ret=[{},True]
+        ret=[{},True]#{question:mark} for all validly marked questions. Bool indicates overall success
         if final_validate:
             try:
                 final_path=os.path.join(filedir,tag+config["output suffix"])
@@ -297,6 +303,7 @@ def cmd_config(args):#user update config file
     config["marked suffix"]=input("Suffix for marked source files e.g.\'_m.tex\': ")
     config["output suffix"]=input("Suffix for marked output files e.g.\'_m.pdf\': ")
     config["output viewer"]=input("Viewer application: ")
+    config["script_dir"]=input("Script directory: ")
     try:
         with open("MarkHelper.cfg","w") as config_file:
             json.dump(config,config_file)
@@ -305,8 +312,7 @@ def cmd_config(args):#user update config file
     return True
 
 def cmd_begin(args):#begin marking 
-    global script_directory
-    script_directory=input("Folder of scripts: ")
+    script_directory=config["script_dir"]
     
     inp=input("Questions to mark (separated by spaces): ")
     question_names=inp.split()
@@ -321,7 +327,7 @@ def cmd_begin(args):#begin marking
     while not quit_flag:
         print("Checking marking state...")
         try:
-            to_mark=check_marking_state(script_directory,question_names,final_validate)#initialize to_mark from given script directory
+            to_mark=check_marking_state(script_directory,question_names,final_validate)[0]#initialize to_mark from given script directory
         except:
             print("Failed to update marking state!")
             return True
@@ -360,6 +366,54 @@ def cmd_begin(args):#begin marking
                 break    
      
     return True
+
+def cmd_makecsv(args):#begin marking 
+    script_directory=config["script_dir"]
+    
+    out_path=os.path.join(get_marked_path(script_directory),
+                          input("CSV filename: "))
+    
+    try:
+        with open(out_path,'r'): pass
+        if not input("File {} exists, overwrite? [y/n]: ".format(out_path)) in ['y','Y']:
+            print("Operation cancelled.")
+            return True
+    except: pass
+    
+    inp=input("Questions for which to extract marks (separated by spaces): ")
+    question_names=inp.split()
+    
+    final_validate=input("Require final validation of marking? [y/n]: ") in ["y","Y"]
+    
+    try:
+         to_mark,done_mark=check_marking_state(script_directory,question_names,final_validate)#initialize to_mark from given script directory
+    except:
+        print("Failed to read marking state!")
+        return True
+    
+    if to_mark!={}:
+        print("Warning! Selected questions not marked in some scripts. Including scripts: ")
+        en=list(enumerate(to_mark))
+        
+        for r in range(min(10,len(en))):
+            #print(en[r])#debug
+            print("{}".format(en[r][1]))
+    
+    try:
+        with open(out_path,'w') as file:
+            file.write("Script #")#header line
+            for q in question_names:
+                file.write(", Question {}".format(q))
+            #body
+            for d in sorted(done_mark.keys()):
+                file.write("\n{}".format(d))
+                #print(done_mark[d])#debug
+                for q in question_names:
+                    file.write(",{}".format(done_mark[d][2][q]))
+    except:
+        print("Failed to write csv file.")
+    return True
+            
 '''
 def cmd_declare_marked(args):#declare a script as marked (mostly diagnostic use)
     tag=input("Tag for file(s) confirmed marked: ")
@@ -381,13 +435,18 @@ Main CLI cmd parser
 
 return False to terminate main loop
 '''
-handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin}#define handlers
+handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin, 'makecsv':cmd_makecsv}#define handlers
 def parse_cmd(cmd):
     toks=cmd.split()
     if len(toks)==0: return True#basic checks
     
     if toks[0] in handlers:
-        return handlers[toks[0]](toks[1:])
+        try:
+            return handlers[toks[0]](toks[1:])
+        except:
+            raise#debug
+            print("Problem occured in {}".format(toks[0]))
+            return True
     else: 
         print("Unrecognized command!")
         return True
