@@ -2,7 +2,18 @@
 
 \usepackage{amsfonts,mathtools}
 
-%#_final_assert=\k \!! \regex '\\\\usepackage\\[.*\\bgrid\\b.*\\]' %DO NOT ALTER %import markpage on line below!
+%markpage shortcuts
+\newcommand{\mt}[2]{\mnoth #1#2 {\LARGE\mtick}}
+\newcommand{\mc}[2]{\mnoth #1#2 {\LARGE\mcross}}
+\def\mtm#1-#2#3{\mnoth #2#3{\LARGE\mtick \;\large#1}}
+\def\mcm#1-#2#3{\mnoth #2#3{\LARGE\mcross\; \large#1}} 
+\def\mhq#1 #2-#3#4{\mnoth[node opts={ultra thick, shape=circle, draw}]#3#4{\Large$\displaystyle\frac{#1}{#2}$}}
+%Usage e.g. \mt ab %puts a large tick at column 'a', row 'b'
+% \mcm 5-xy %puts a cross and non-circled '5'  at column 'x' row 'y' 
+% \mcm good-xy %puts a cross and non-circled 'good'  at column 'x' row 'y' 
+%\mhq 6 10-xy %puts Large 6/10 circled at column 'x' row 'y' 
+
+%#_final_assert=\k \!! \regex '\\\\usepackage\\[.*\\bgrid\\b.*\\]' %DO NOT ALTER %keep \usepackage...{markpage} on line below!
 %#_init=\echo \+ '\\usepackage[source = ' \+ _in_path ', grid]{markpage}%use option flag "grid" to show grid' _init
 
 %#_question_reset=\k \set 'qm_bkmk' \#ol _question_reset %DO NOT ALTER  %Question mark inputs will appear below this line...
@@ -18,7 +29,7 @@
 %MarkHelper scripting. DO NOT ALTER
 
 %Print lines for inputting question marks at bookmark point
-%#_question_reset=\k \echo@ qm_bkmk \+ '%#_question_mark=\\if \\== _question_name \'' \+ _question_name \+ '\'  \'Q' \+ _question_name  '\' \\k _question_mark' _question_reset
+%#_question_reset=\k \echo@ qm_bkmk \+ '%#_question_mark=\\if \\== _question_name \'' \+ _question_name \+ '\'  \'MK\' \\k _question_mark %Replace MK with mark for question '  _question_name _question_reset
 
 %Assert question mark entered (check it's at least been modified)
 %#_question_assert=\k \&& \!! \== _question_mark \+ 'Q' _question_name \!! \== _question_mark ''
