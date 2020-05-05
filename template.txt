@@ -14,7 +14,7 @@
 %\mhq 6 10-xy %puts Large 6/10 circled at column 'x' row 'y' 
 
 %#_final_assert=\k \!! \regex '\\\\usepackage\\[.*\\bgrid\\b.*\\]' %DO NOT ALTER %keep \usepackage...{markpage} on line below!
-%#_init=\echo \+ '\\usepackage[source = ' \+ _in_path ', grid]{markpage}%use option flag "grid" to show grid' _init
+%#_init=\echo \+ '\\usepackage[source = ' \+ _in_path ',margin=0cm, grid]{markpage}%use option flag "grid" to show grid' _init
 
 %#_question_reset=\k \set 'qm_bkmk' \#ol _question_reset %DO NOT ALTER  %Question mark inputs will appear below this line...
 
@@ -32,4 +32,4 @@
 %#_question_reset=\k \echo@ qm_bkmk \+ '%#_question_mark=\\if \\== _question_name \'' \+ _question_name \+ '\'  \'MK\' \\k _question_mark %Replace MK with mark for question '  _question_name _question_reset
 
 %Assert question mark entered (check it's at least been modified)
-%#_question_assert=\k \&& \!! \== _question_mark \+ 'Q' _question_name \!! \== _question_mark ''
+%#_question_assert=\k \&& \!! \== _question_mark 'MK' \!! \== _question_mark ''
