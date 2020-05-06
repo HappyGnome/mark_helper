@@ -186,8 +186,8 @@ Open file at path, process with mhu and save back to same path
 for marking a question
 "_question_name" - name of the question e.g. '3a'
 '''
-def reset_file_q(path,question_name):
-    mhu.process_file(path,path,{"_question_reset":"1", "_question_name":question_name})
+def reset_file_q(path,question_name,previous_mark=''):
+    mhu.process_file(path,path,{"_question_reset":"1", "_question_name":question_name,"_question_prevmark":previous_mark})
     
 '''
 Open file at path, process with mhu and save back to same path
@@ -242,7 +242,7 @@ def make_user_mark(tag, to_mark,script_directory, questions=[], final_validate=T
     #reset all variables to inspect later
     for q in questions:
         try:
-            reset_file_q(filepath,q)
+            reset_file_q(filepath,q,to_mark[tag][2].get(q,''))
         except:
             print("Failed to reset question {} in {}".format(q,filepath))
     if final_validate:
@@ -387,7 +387,9 @@ def cmd_begin(args):#begin marking
             marks_done={}#questions already marked for this script this pass
             while True:
                 
-                marks,marked=make_user_mark(tag,to_mark,script_directory,[q for q  in question_names if not q in marks_done],final_validate)
+                marks,marked=make_user_mark(tag,to_mark,script_directory,\
+                        question_names,\
+                        final_validate)
                 #record scores in to_mark
                 to_mark[tag][2].update(marks)
                 marks_done.update(marks)
@@ -401,19 +403,20 @@ def cmd_begin(args):#begin marking
                             print("Warning: question {} not marked!".format(q))'''
                 #check also validation verdict from make_user_mark
                 to_mark[tag][3]=marked and final_validate# and all_marked#if it's already True, reset it if not final_validate
-                if marked:break#all done for this script
+                if marked:
+                    print("Marks read: "+', '.join(["Q"+q+": "+marks_done[q] for q in marks_done]))
+                    inp=input("Continue? (\'q\' to quit, \'r\' to review last) : ")
+                    if inp in ['q','Q']:
+                        quit_flag=True
+                        break
+                    if not inp in ['r','R']:
+                        break#all done for this script
                 else:
                     selection=input("Marking of "+tag+" not complete. Continue? (\'q\' to quit, \'s\' to skip this file): ")
                     quit_flag=selection in ['q','Q']
                     if quit_flag or selection in ['s','S']: break
-            print("Marks read out: "+', '.join(["Q"+q+": "+to_mark[tag][2][q] for q in to_mark[tag][2]]))
             declare_marked(tag,script_directory,to_mark)#update marking state in file
-            if quit_flag: break
-            selection=input("Continue? (\'q\' to quit): ")
-            if selection in ['q','Q']:
-                quit_flag=True
-                break    
-     
+            if quit_flag: break     
     return True
 
 def cmd_makecsv(args):#begin marking 

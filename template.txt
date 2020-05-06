@@ -30,8 +30,10 @@
 %***********************************************************************************
 %MarkHelper scripting. DO NOT ALTER
 
+%questions with no previous mark
+%#_question_reset=\k \if \== _question_prevmark '' \set '_question_prevmark' 'MK' \endif \endif _question_reset
 %Print lines for inputting question marks at bookmark point
-%#_question_reset=\k \echo@ qm_bkmk \+ '%#_question_mark=\\if \\== _question_name \'' \+ _question_name \+ '\'  \'MK\' \\k _question_mark %Replace MK with mark for question '  _question_name _question_reset
+%#_question_reset=\k \echo@ qm_bkmk \+ '%#_question_mark=\\if \\== _question_name \'' \+ _question_name \+ '\'  \'' \+ _question_prevmark \+ '\' \\k _question_mark %Replace MK with mark for question '  _question_name _question_reset
 
 %Assert question mark entered (check it's at least been modified)
 %#_question_assert=\k \&& \!! \== _question_mark 'MK' \!! \== _question_mark ''
