@@ -282,8 +282,49 @@ def make_user_mark(tag, to_mark,script_directory, questions=[], final_validate=T
 
         return ret
     
-    
-    
+
+'''
+Run pdflatex on a set of files (assuming pdflatex is available in path)
+
+runs pdflatex in the given directory for each tex file listed in files
+'''
+def batch_pdflatex(directory, files):
+    here=".."
+    try:
+        here=os.getcwd()
+        os.chdir(directory)
+        for s in files:#compile examples
+            try:
+                sp.run(["pdflatex",s,"-aux-directory=./aux_files"],check=True, capture_output=True)
+            except sp.CalledProcessError:
+                raise#debug
+                print("PDFLaTeX failed. Continuing...")
+    finally:
+        os.chdir(here) 
+
+'''
+Create tex files for marking all scripts in to_mark (assumed originals contained in script_directory)
+
+run pdflatex on the output using batch_pdflatex
+'''
+def pre_build(to_mark,script_directory):
+    filedir=get_marked_path(script_directory)
+    if not os.path.isdir(filedir):#create directory if necessary
+        os.mkdir(filedir)
+    to_compile=[]
+    for tag in to_mark:
+        #file to create/edit
+        filepath=os.path.join(filedir,tag+config["marked suffix"])
+        try:#check file exists
+            with open(filepath,'r'):pass
+        except:#create new file
+            try:
+                make_from_template(filepath,'../'+tag,
+                                   count_pdf_pages([os.path.join(script_directory,p) for p in to_mark[tag][0]]))
+                to_compile.append(tag+config["marked suffix"])
+            except:
+                print("Failed to create new file at: {}".format(filepath))
+    batch_pdflatex(filedir,to_compile)
 
 '''############################################################################
 Command line interface
@@ -334,6 +375,13 @@ def cmd_begin(args):#begin marking
         if to_mark=={}:
             print("Marking complete!")# Use \'review\' to check marked documents.")#TODO: implement this
             break
+        try:#precompile
+            print("Precompiling...")
+            pre_build(to_mark,script_directory)
+            print("Precompiling successful!")
+        except:
+            raise#debug
+            print("Precompiling failed!")
         for tag in to_mark:
             print("Now marking "+tag)
             marks_done={}#questions already marked for this script this pass
@@ -358,6 +406,7 @@ def cmd_begin(args):#begin marking
                     selection=input("Marking of "+tag+" not complete. Continue? (\'q\' to quit, \'s\' to skip this file): ")
                     quit_flag=selection in ['q','Q']
                     if quit_flag or selection in ['s','S']: break
+            print("Marks read out: "+', '.join(["Q"+q+": "+to_mark[tag][2][q] for q in to_mark[tag][2]]))
             declare_marked(tag,script_directory,to_mark)#update marking state in file
             if quit_flag: break
             selection=input("Continue? (\'q\' to quit): ")
