@@ -3,20 +3,22 @@
 \usepackage{amsfonts,mathtools}
 
 %markpage shortcuts
-\newcommand{\mt}[2]{\mnoth #1#2 {\LARGE\mtick}}
-\newcommand{\mc}[2]{\mnoth #1#2 {\LARGE\mcross}}
-\def\mtm#1-#2#3{\mnoth #2#3{\LARGE\mtick \;\large#1}}
-\def\mcm#1-#2#3{\mnoth #2#3{\LARGE\mcross\; \large#1}} 
-\def\mhq#1 #2-#3#4{\mnoth[node opts={ultra thick, shape=circle, draw}]#3#4{\Large$\displaystyle\frac{#1}{#2}$}}
-%Usage e.g. \mt ab %puts a large tick at column 'a', row 'b'
-% \mcm 5-xy %puts a cross and non-circled '5'  at column 'x' row 'y' 
-% \mcm good-xy %puts a cross and non-circled 'good'  at column 'x' row 'y' 
-%\mhq 6 10-xy %puts Large 6/10 circled at column 'x' row 'y' 
+\newcommand{\mtt}[2]{\mnoth #1#2 {\LARGE\mtick}}
+\newcommand{\mcc}[2]{\mnoth #1#2 {\LARGE\mcross}}
+\def\mt#1 #2#3/{\mnoth #2#3{\LARGE\mtick \;\large#1}}
+\def\mc#1 #2#3/{\mnoth #2#3{\LARGE\mcross\; \large#1}} 
+\def\mq#1 #2 #3#4/{\mnoth[node opts={ultra thick, shape=circle, draw}]#3#4{\Large$\displaystyle\frac{#1}{#2}$}}
+%Usage e.g. \mtt ab %puts a large tick at column 'a', row 'b'
+% \mc 5 xy/ %puts a cross and non-circled '5'  at column 'x' row 'y' 
+% \mc good xy/ %puts a cross and non-circled 'good'  at column 'x' row 'y' 
+%\mq 6 10 xy/ %puts Large 6/10 circled at column 'x' row 'y' 
 
 %#_final_assert=\k \!! \regex '\\\\usepackage\\[.*\\bgrid\\b.*\\]' %DO NOT ALTER %keep \usepackage...{markpage} on line below!
 %#_init=\echo \+ '\\usepackage[source = ' \+ _in_path ',margin=0cm, grid]{markpage}%use option flag "grid" to show grid' _init
 
 %#_question_reset=\k \set 'qm_bkmk' \#ol _question_reset %DO NOT ALTER  %Question mark inputs will appear below this line...
+
+\mpageDefaults{subgrid show=0}
 
 \begin{document}
 %#_init=\set 'loopPg' '1' \r _#pages \echo \+ '\\begin{mpage}%Page ' \+ loopPg '\n\\end{mpage}' \set 'loopPg' \+d loopPg '1' _init _init
