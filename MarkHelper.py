@@ -17,7 +17,7 @@ import PyPDF2 as ppdf
 #load config or create it
 config={"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
         "marked suffix":"_marked.tex", "output suffix":"_marked.pdf",\
-        "script_dir":"ToMark","output viewer":"C:\Program Files\SumatraPDF\sumatrapdf.exe"}
+        "script_dir":"ToMark","compile_command":"pdflatex"}
 
 '''
 MKH file format:
@@ -382,8 +382,7 @@ def batch_compile(directory, files):
         os.chdir(directory)
         for s in files:#compile examples
             try:
-                #TODO allow other commands to be set in config
-                sp.run(["pdflatex",s,"-aux-directory=./aux_files"],check=True, capture_output=True)
+                sp.run([config["compile_command"],s],check=True, capture_output=True)
             except sp.CalledProcessError:
                 raise#debug
                 print("Compilation failed. Continuing...")
@@ -393,7 +392,7 @@ def batch_compile(directory, files):
 '''
 Create tex files for marking all scripts in to_mark (assumed originals contained in script_directory)
 
-run compiler on the output using batch_compile
+run compiler on new source files using batch_compile
 '''
 def pre_build(to_mark,script_directory):
     filedir=get_marked_path(script_directory)
@@ -491,8 +490,9 @@ def cmd_config(args):#user update config file
     config["template"]=input("Template file: ")
     config["marked suffix"]=input("Suffix for marked source files e.g.\'_m.tex\': ")
     config["output suffix"]=input("Suffix for marked output files e.g.\'_m.pdf\': ")
-    config["output viewer"]=input("Viewer application: ")
+    #config["output viewer"]=input("Viewer application: ")
     config["script_dir"]=input("Script directory: ")
+    config["compile_command"]=input("Compile command (e.g. \'pdflatex\' to run  \'pdflatex <source file>\'): ")
     try:
         with open("MarkHelper.cfg","w") as config_file:
             json.dump(config,config_file)
