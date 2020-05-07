@@ -90,7 +90,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True, match_
     to_mark_temp=get_script_list(script_directory)
     
     for t in to_mark_temp:
-        to_mark_temp[t].extend(['',{},False,''])#input hash,question marks,source validate flag, output hash
+        to_mark_temp[t]=[to_mark_temp[t],'',{},False,'']#input hash,question marks,source validate flag, output hash
         files_hash=mhu.hash_file_list(to_mark_temp[t][0], script_directory)
         marked=False#file exists and all questions marked?
         #check for matching .mkh file
@@ -132,17 +132,24 @@ Do extra checks on timestamps for source (e.g. latex) file and final pdf output
 (If source has been modified since last compilation then latest changes may not 
 be reflected) 
 
-Return False if modification dates are in the wrong order
+if neither has changed since time edit_epoch then the test passes in any case
+
+Return [res,mtime]
+res=False if modification dates are in the wrong order
+mtime= last tie that one of the files was modified or 0 if res==False
 '''
-def check_mod_timestamps(source_path,final_path):
+def check_mod_timestamps(source_path,final_path, edit_epoch=0):
     try:
         src_stat=os.stat(source_path)
         fin_stat=os.stat(final_path)
         #print("{} {}".format(src_stat.st_mtime,fin_stat.st_mtime))#debug
-        return src_stat.st_mtime<=fin_stat.st_mtime
+        last_time=max(src_stat.st_mtime,src_fin.st_mtime)
+        if last_time<=edit_epoch or fin_stat.st_mtime==last_time:
+            return [True,last_time]
+        return [False,0]
         
     except:
-        return False
+        return [False,0]
 
 '''
 Do extra checks on page counts 
@@ -288,8 +295,18 @@ def make_user_mark(tag, to_mark,script_directory, questions=[],
         os.mkdir(filedir)
     #file to create/edit
     filepath=os.path.join(filedir,tag+config["marked suffix"])
+    
+    #output files
+    output_name=tag+config["output suffix"]#name of output file
+    final_path=os.path.join(filedir,output_name)
+            
+    edit_epoch=0#time after which unsaved edits cause validation failure
     try:#check file exists
         with open(filepath,'r'):pass
+        
+        try:#get time of last change if output file exists and newer than source
+            _,edit_epoch=check_mod_timestamps(filepath,final_path)
+        except: pass
     except:#create new file
         try:
             make_from_template(filepath,'../'+tag,
@@ -317,9 +334,9 @@ def make_user_mark(tag, to_mark,script_directory, questions=[],
         ret=[{},True,'']#{question:mark} for all validly marked questions. Bool indicates overall success
         output_hash=''#set to indicate output checks passed (but will not be returned unless source also validated)
         if final_validate_output:
-            output_name=tag+config["output suffix"]#name of output file
-            final_path=os.path.join(filedir,output_name)
-            if not check_mod_timestamps(filepath,final_path):#do this first or timestamps change
+            #do this first or timestamps change
+            #ignore edits before edit_epoch (start of this method) if applicable
+            if not check_mod_timestamps(filepath,final_path,edit_epoch):
                 print("Remember to compile after saving!")
             else:#generate hash (also warn about page counts)
                 if not check_page_counts([os.path.join(script_directory,p) \
@@ -435,19 +452,18 @@ def mark_one_loop(tag,to_mark,script_directory,question_names,source_validate,\
         to_mark[tag][2].update(marks)
         marks_done.update(marks)
 
-
+        print("Marks updated: "+', '.join(["Q"+q+": "+marks_done[q] for q in marks_done]))
+            
         if marked:
-            print("Marks updated: "+', '.join(["Q"+q+": "+marks_done[q] for q in marks_done]))
             inp=input("Continue? (\'q\' to quit, \'r\' to review last) : ")
-            if inp in ['q','Q']:
+            if inp in ['q','Q']:#quit this loop and caller (but still try validating)
                 quit_flag=True
-                break
-            if not inp in ['r','R']:
+            if not inp in ['r','R']:#no validation yet
                 #check also validation verdict from make_user_mark
                 to_mark[tag][3]=source_validate#marked==True here. if not source_validate, don't assume checks complete
                 
                 #source validate should already be True if output_validate!
-                if source_validate and output_validate: 
+                if source_validate and output_validate and outhash: 
                     to_mark[tag][4][0]=outhash
                     to_mark[tag][4][1]={q:marks_done[q] for q in marks_done}
                 break#all done for this script
@@ -498,6 +514,7 @@ def cmd_begin(args):#begin marking
         try:
             to_mark=check_marking_state(script_directory,question_names,source_validate)[0]#initialize to_mark from given script directory
         except:
+            raise#debug
             print("Failed to update marking state!")
             return True
         if to_mark=={}:
@@ -546,24 +563,29 @@ def cmd_build_n_check(args):
         #check for scripts with unmarked questions (from list) or which
         #have not had the source validated
         to_mark,done_mark=check_marking_state(script_directory,question_names,True,False)
+        if to_mark!={}:
+            print("Some scripts missing marks or validation: ")
+            print_some(to_mark)
+            return True
+        #now all scripts validly marked
+        #get all of those that need user to check output
+        to_mark,done_mark=check_marking_state(script_directory,question_names,True,True)
     except:
         print("Failed to update marking state!")
         return True
-    if to_mark!={}:
-        print("Some scripts missing marks or validation: ")
-        print_some(to_mark)
-        return True
+    
     try:#compile
         print("Compiling...")
-        pre_build(to_mark,script_directory)#TODO VV
+        batch_compile(get_marked_path(script_directory),[tag+config["marked suffix"] for tag in to_mark])
         print("Compiling successful!")
     except:
-        #raise#debug
+        raise#debug
         print("Compiling failed!")
+        return True
     for tag in to_mark:
-        print("Now marking "+tag)
+        print("Now checking "+tag)
         quit_flag=not mark_one_loop(tag,to_mark,script_directory,question_names,
-                                    source_validate,False)
+                                    True,True)
         declare_marked(tag,script_directory,to_mark)#update marking state in file
         if quit_flag: break     
     return True
@@ -584,17 +606,18 @@ def cmd_makecsv(args):#begin marking
     inp=input("Questions for which to extract marks (separated by spaces): ")
     question_names=inp.split()
     
-    final_validate=input("Require final validation of marking? [y/n]: ") in ["y","Y"]
+    #final_validate=input("Require final validation of marking? [y/n]: ") in ["y","Y"]
     
     try:
-         to_mark,done_mark=check_marking_state(script_directory,question_names,final_validate)#initialize to_mark from given script directory
+         to_mark,done_mark=check_marking_state(script_directory,question_names,True,True)#initialize to_mark from given script directory
     except:
         print("Failed to read marking state!")
         return True
     
     if to_mark!={}:
-        print("Warning! Selected questions not marked in some scripts. Including scripts: ")
+        print("Warning! Selected questions may not be validly marked in some scripts. Including: ")
         print_some(to_mark)
+        print("Remember to run \'check\' command for final version.")
     
     try:
         with open(out_path,'w') as file:
@@ -606,7 +629,7 @@ def cmd_makecsv(args):#begin marking
                 file.write("\n{}".format(d))
                 #print(done_mark[d])#debug
                 for q in question_names:
-                    file.write(",{}".format(done_mark[d][2][q]))
+                    file.write(",{}".format(done_mark[d][4][1][q]))
     except:
         print("Failed to write csv file.")
     return True
@@ -632,7 +655,9 @@ Main CLI cmd parser
 
 return False to terminate main loop
 '''
-handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin, 'makecsv':cmd_makecsv}#define handlers
+handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin, 
+          'makecsv':cmd_makecsv,
+          'check':cmd_build_n_check}#define handlers
 def parse_cmd(cmd):
     toks=cmd.split()
     if len(toks)==0: return True#basic checks

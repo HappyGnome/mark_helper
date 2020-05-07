@@ -13,7 +13,7 @@
 % \mc good xy/ %puts a cross and non-circled 'good'  at column 'x' row 'y' 
 %\mq 6 10 xy/ %puts Large 6/10 circled at column 'x' row 'y' 
 
-%#_final_assert=\k \!! \regex '\\\\usepackage\\[.*\\bgrid\\b.*\\]' %DO NOT ALTER %keep \usepackage...{markpage} on line below!
+%#_init=\echo \+ '%#_final_assert=\\k \\skip \\echo \'\\\\usepackage[source = ' \+ _in_path ',margin=0cm]{markpage}%use option flag "grid" to show grid\' \'1\' %DO NOT ALTER %keep \\usepackage...{markpage} on line below!' _init
 %#_init=\echo \+ '\\usepackage[source = ' \+ _in_path ',margin=0cm, grid]{markpage}%use option flag "grid" to show grid' _init
 
 %#_question_reset=\k \set 'qm_bkmk' \#ol _question_reset %DO NOT ALTER  %Question mark inputs will appear below this line...

@@ -16,13 +16,13 @@ import hashlib
 def hash_file_list(files, directory=''): 
     buf_size=2048#bytes
     the_hash=hashlib.sha256()
+    #print(files)#debug
     for f in files:
-        the_file=open(os.path.join(directory,f),"rb")
-        while True:#until eof
-            chunk=the_file.read(buf_size)
-            if len(chunk)==0: break
-            the_hash.update(chunk)            
-        the_file.close()
+        with open(os.path.join(directory,f),"rb") as the_file:
+            while True:#until eof
+                chunk=the_file.read(buf_size)
+                if len(chunk)==0: break
+                the_hash.update(chunk)            
     return the_hash.hexdigest()
 
 
