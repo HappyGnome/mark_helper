@@ -205,8 +205,8 @@ def batch_compile(directory, files, compile_command):
             try:
                 sp.run([compile_command,s],check=True, capture_output=True)
             except sp.CalledProcessError:
-                raise#debug
-                print("Compilation failed. Continuing...")
+                #raise#debug
+                print("Compilation failed for {}. Continuing...".format(s))
     finally:
         os.chdir(here) 
 
@@ -295,3 +295,17 @@ def mark_one_loop(tag,to_mark,script_directory,template_path,question_names,sour
             quit_flag=selection in ['q','Q']
             if selection in ['s','S']: break
     return not quit_flag
+
+
+'''
+Attempt to copy
+source file from path_in to path_out (overwriting path_out if it exists)
+'''
+def copyFile(path_in,path_out):
+    buflen=100000
+    with open(path_in,'rb') as ifile:
+        with open(path_out,'wb')as ofile:
+            while True:
+                buf=ifile.read(buflen)
+                if buf==b'': break#eof
+                ofile.write(buf)

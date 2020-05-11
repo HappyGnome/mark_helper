@@ -8,6 +8,7 @@ Methods involving tracking marking progress, and script files
 """
 import os
 import json
+import numpy as np
 
 import PyPDF2 as ppdf
 
@@ -169,3 +170,60 @@ to_mark=dictionary of mkh entry data for current doc list (tag is a key for this
 def declare_marked(tag, script_directory, to_mark):
     with open(os.path.join(script_directory,tag+".mkh"),"w") as mkh:
         json.dump(to_mark[tag],mkh)
+        
+'''
+Copy a pdf from in_path and create a new pdf at out_path (may overwrite existing file)
+with the same number of pages as input and each page the same size as the 
+corresponding one in input. Each page of the output is blank.
+'''
+def make_blank_pdf_like(in_path,out_path):
+    reader=ppdf.PdfFileReader(in_path)
+    writer=ppdf.PdfFileWriter()
+    for i in range(reader.getNumPages()):
+        dims=reader.getPage(i).mediaBox
+        writer.addBlankPage(np.abs(dims.lowerRight[0]-dims.lowerLeft[0]),
+                            np.abs(dims.upperRight[1]-dims.lowerRight[1]))
+    
+    with open(out_path, "wb") as file:
+        writer.write(file)
+        
+
+'''
+Add content of pdf at path file_above over file_below page by page
+
+save resulting pdf to out_path.
+
+raises ValueError if number of pages in the two input files don't match
+raises ValueError if page sizes don't match
+'''
+def merge_pdfs(file_below,file_above, out_path):
+    writer=ppdf.PdfFileWriter()
+    reader_below=ppdf.PdfFileReader(file_below)
+    reader_above=ppdf.PdfFileReader(file_above)
+    
+    if reader_below.getNumPages()!=reader_above.getNumPages():
+        raise ValueError("Pagecount mismatch.")
+    for i in range(reader_below.getNumPages()):
+        page=None                
+        page=reader_below.getPage(i) 
+        page_above=reader_above.getPage(i)
+        
+        dims=page.mediaBox
+        dims_above=page.mediaBox
+        if dims.lowerLeft!=dims_above.lowerLeft or\
+            dims.upperRight!=dims_above.upperRight:
+                raise ValueError("Page size mismatch")
+        
+        page.mergeScaledPage(page_above,1.0,True)
+           
+        writer.addPage(page)
+    
+    with open(out_path, "wb") as file:
+        writer.write(file)
+
+'''
+###############################################################################
+'''
+if __name__=='__main__':
+    make_blank_pdf_like("ToMark/silly_marked.pdf", "ToMark/like_silly_marked.pdf") 
+    

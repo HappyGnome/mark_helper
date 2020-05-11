@@ -11,16 +11,16 @@ import sys
 import os
 
 import MHScriptManagement as mhsm
-import MHEdittManagement as mhem
+import MHEditManagement as mhem
 
 #import subprocess as sp
 #import PyPDF2 as ppdf
 
 
 #load config or create it
-config={"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
+config = {"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
         "marked suffix":"_marked.tex", "output suffix":"_marked.pdf",\
-        "script_dir":"ToMark","compile_command":"pdflatex"}
+        "script_dir":"ToMark", "compile_command":"pdflatex"}
 
 '''
 MKH file format:
@@ -32,22 +32,13 @@ values=[filenames,hash,questions,final_valid, [output_hash,qs_valid]]
 #filenames is the list of file paths corresponding to the tag
 #hash is a hash value of those files at the time they were deemed marked
 #questions={'question':'mark'} for questions asserted as marked
-#final_valid is set true when source file passed a final validation check 
+#final_valid is set true when source file passed a final validation check
     last time it was marked
 output_hash= '' or a hash of the output (pdf) when both source and output 
     validation have succeeded
 qs_valid= {question_name: mark} (as in questions) for all questions checked
 when output_hash set
 '''
-
-
-
-
-
-
-
-    
-
 
 '''############################################################################
 Command line interface
@@ -204,7 +195,7 @@ def cmd_makecsv(args):#begin marking
     #final_validate=input("Require final validation of marking? [y/n]: ") in ["y","Y"]
     
     try:
-         to_mark,done_mark=mhsm.check_marking_state(script_directory,
+        to_mark,done_mark=mhsm.check_marking_state(script_directory,
                                                     question_names,True,True,
                                                    numsep=config["numsep"],
                                         output_suffix=config["output suffix"])#initialize to_mark from given script directory
@@ -231,7 +222,75 @@ def cmd_makecsv(args):#begin marking
     except:
         print("Failed to write csv file.")
     return True
+
+'''
+Create blank pdf for each script and compile marked source files over the 
+corresponding blank.
+
+Merge the output pdfs on top of copies of the original scripts
+'''
+def cmd_make_merged_output(args):
+    script_directory=config["script_dir"]
+    
+    inp=input("Confirm questions required in completed scripts (separated by spaces): ")
+    question_names=inp.split()
+    
+    print("Checking marking state...")
+    try:
+        #check for scripts with unmarked questions (from list) or which
+        #have not had the source validated
+        to_mark,done_mark=mhsm.check_marking_state(script_directory,
+                                                   question_names,True,True, 
+                                                   numsep=config["numsep"],
+                                        output_suffix=config["output suffix"])
+        if to_mark!={}:
+            print("Some scripts missing marks or validation: ")
+            print_some(to_mark)
+            print("Please ensure all marking completed before merging.")
+    except:
+        print("Failed to update marking state!")
+        return True
+    
+    '''
+    Make blanks
+    '''
+    blankdir=os.path.join(script_directory,"merged")
+    newsourcedir=os.path.join(blankdir,"source")
+    newfinaldir=os.path.join(blankdir,"final")
+    for path in [blankdir,newsourcedir,newfinaldir]:
+        if not os.path.isdir(path):#create directory if necessary
+            os.mkdir(path)
+    for d in done_mark:
+        try:
+            for file in done_mark[d][0]:#constituent files                
+                mhsm.make_blank_pdf_like(os.path.join(script_directory,file),
+                                         os.path.join(blankdir,file))
+        except:
+            print("Warning! Failed to make blanks for {}".format(d))
+    
+    '''
+    copy source files
+    '''
+    oldsourcedir=mhsm.get_marked_path(script_directory)
+    to_compile=[]
+    for d in done_mark:
+        try:
+            new_source_path=os.path.join(newsourcedir,d+config["marked suffix"])
+            mhem.copyFile(os.path.join(oldsourcedir,d+config["marked suffix"]),
+                          new_source_path)
+            to_compile.append(new_source)
+        except:
+            print("Warning! Failed to copy source file for {}".format(d))
             
+    '''
+    compile source files
+    '''
+    mhem.batch_compile(newsourcedir,to_compile,config["compile_command"])
+    
+    '''
+    TODO: make merge_pdfs work for multiple-file scripts
+    '''  
+        
 '''
 def cmd_declare_marked(args):#declare a script as marked (mostly diagnostic use)
     tag=input("Tag for file(s) confirmed marked: ")
@@ -283,6 +342,6 @@ except:
 '''
 Main CLI loop  ################################################################
 '''
-while(True):
+while True:
     cmd=input(">")
     if not parse_cmd(cmd): break
