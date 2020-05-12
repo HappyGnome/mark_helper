@@ -44,7 +44,7 @@ def nextToken(string):
     if toktype=='command':
         #strip leading slash and return
         return [toks[0][1:],'command',string[continue_from:]]
-    elif toktype=='literal':
+    if toktype=='literal':
         lit_start=string.find('\'')+1#start of string
         str_build=''
         #find string end 
@@ -118,7 +118,8 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
             raise ParseError("Not enough tokens!")
         if tok[1]=='command':
             val=command_list[tok[0]](toks,
-                       lines, cur_line, out_lines, variables)
+                                     lines, cur_line, out_lines, 
+                                     variables)
         elif tok[1]=='literal':
             pass#default is to treat tok as literal
         else: #assume other and try substitution
@@ -138,7 +139,7 @@ command to add current line to output and return no token
 \k
 '''
 def cmd_echo_thisline(toks,
-                       lines, cur_line, out_lines, variables):
+                      lines, cur_line, out_lines, variables):
     
     out_lines.append(lines[cur_line][:])
     return None #interpret(toks,1, lines, cur_line, out_lines, variables)[0]
@@ -148,7 +149,7 @@ command remove next line from input and returns no token
 \skip
 '''
 def cmd_delnxtline(toks,
-                       lines, cur_line, out_lines, variables):
+                   lines, cur_line, out_lines, variables):
     try:
         lines.pop(cur_line+1)
     except IndexError:pass
@@ -160,7 +161,7 @@ command to add line to output and return no token
 '''
 def cmd_echo(toks,lines, cur_line, out_lines, variables):
     text=interpret(toks,1,
-                       lines, cur_line, out_lines, variables)[0]+"\n"
+                   lines, cur_line, out_lines, variables)[0]+"\n"
     out_lines.append(text)
     return None#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
     
@@ -171,7 +172,7 @@ command to concatenate two tokens
 def cmd_concat(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,2,
-                           lines, cur_line, out_lines, variables)
+                       lines, cur_line, out_lines, variables)
         return vals[0]+vals[1]
     except ParseError: raise
     except Exception:
@@ -184,7 +185,7 @@ command to interpret next two tokens as float numbers and add them
 def cmd_addf(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,2,
-                           lines, cur_line, out_lines, variables)
+                       lines, cur_line, out_lines, variables)
         return str(float(vals[0])+float(vals[1]))
     except ParseError: raise
     except Exception:
@@ -197,7 +198,7 @@ command to interpret next two tokens as int numbers and add them
 def cmd_addd(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,2,
-                           lines, cur_line, out_lines, variables)
+                       lines, cur_line, out_lines, variables)
         return str(int(vals[0])+int(vals[1]))
     except ParseError: raise
     except Exception:
@@ -210,7 +211,7 @@ Token represents True if it's '1' otherwise it's false
 def cmd_and(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,2,
-                           lines, cur_line, out_lines, variables)
+                       lines, cur_line, out_lines, variables)
         return str(int(vals[0]=='1' and vals[1]=='1'))
     except ParseError: raise
     except Exception:
@@ -223,7 +224,7 @@ Token represents True if it's '1' otherwise it's false
 def cmd_not(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,1,
-                           lines, cur_line, out_lines, variables)
+                       lines, cur_line, out_lines, variables)
         return str(int(not vals[0]=='1' ))
     except ParseError: raise
     except Exception:
@@ -236,7 +237,7 @@ Token represents True if it's '1' otherwise it's false
 def cmd_or(toks,lines, cur_line, out_lines, variables):
     try:
         vals=interpret(toks,2,
-                           lines, cur_line, out_lines, variables)
+                       lines, cur_line, out_lines, variables)
         return str(int(vals[0]=='1' or vals[1]=='1'))
     except ParseError: raise
     except Exception:

@@ -25,7 +25,8 @@ import MHEditManagement as mhem
 #load config or create it
 config = {"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
         "marked suffix":"_marked.tex", "output suffix":"_marked.pdf",\
-        "script_dir":"ToMark", "compile_command":"pdflatex"}
+        "script_dir":"ToMark", "compile_command":"pdflatex", 
+        "merged suffix":"_marked.pdf"}
 
 '''
 MKH file format:
@@ -62,6 +63,7 @@ def cmd_config(args):#user update config file
     config["template"]=input("Template file: ")
     config["marked suffix"]=input("Suffix for marked source files e.g.\'_m.tex\': ")
     config["output suffix"]=input("Suffix for marked output files e.g.\'_m.pdf\': ")
+    config["merged suffix"]=input("Suffix for final merged output files e.g.\'_m.pdf\': ")
     #config["output viewer"]=input("Viewer application: ")
     config["script_dir"]=input("Script directory: ")
     config["compile_command"]=input("Compile command (e.g. \'pdflatex\' to run  \'pdflatex <source file>\'): ")
@@ -281,33 +283,32 @@ def cmd_make_merged_output(args):
             new_source_path=os.path.join(newsourcedir,d+config["marked suffix"])
             mhem.copyFile(os.path.join(oldsourcedir,d+config["marked suffix"]),
                           new_source_path)
-            to_compile.append(new_source)
+            to_compile.append(new_source_path)
         except Exception:
             LogHelper.print_and_log(logger,"Warning! Failed to copy source file for {}".format(d))
-            
+             
     '''
     compile source files
     '''
     mhem.batch_compile(newsourcedir,to_compile,config["compile_command"])
     
     '''
-    TODO: make merge_pdfs work for multiple-file scripts
-    '''  
-        
-'''
-def cmd_declare_marked(args):#declare a script as marked (mostly diagnostic use)
-    tag=input("Tag for file(s) confirmed marked: ")
-    if tag not in to_mark:
-        print("Tag not found!")
-        return True
-    print("Warning: manual declaration of marking completion is not advised!")
-    go=input("Continue? [y/n]: ")
-    if go not in ['y','Y']:
-        print("declaration cancelled...")
-    else: declare_marked(tag)
-    
-    return True
+    Merge files
     '''
+    for d in done_mark:
+        try:
+            merged_filepath=os.path.join(newfinaldir,
+                                         d+config["merged suffix"])
+            overlay_filepath= os.path.join(newsourcedir,
+                                           d+config["output suffix"])
+            mhsm.merge_pdfs(d[0], overlay_filepath, merged_filepath,
+                            script_directory)
+        except Exception:
+            LogHelper.print_and_log(logger,
+                                    "Warning! Failed to merge output for {}"
+                                    .format(d))
+    return True
+
 '''
 *******************************************************************************
 *******************************************************************************
@@ -317,7 +318,8 @@ return False to terminate main loop
 '''
 handlers={"quit":cmd_exit, "config":cmd_config, "begin":cmd_begin, 
           'makecsv':cmd_makecsv,
-          'check':cmd_build_n_check}#define handlers
+          'check':cmd_build_n_check,
+          'makemerged':cmd_make_merged_output}#define handlers
 def parse_cmd(cmd):
     toks=cmd.split()
     if len(toks)==0: return True#basic checks
