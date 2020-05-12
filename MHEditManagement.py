@@ -128,14 +128,14 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
         
         try:#get time of last change if output file exists and newer than source
             _,edit_epoch=mhsm.check_mod_timestamps(filepath,final_path)
-        except: pass
-    except:#create new file
+        except Exception: pass
+    except Exception:#create new file
         try:
             make_from_template(filepath,'../'+tag,
                             mhsm.count_pdf_pages([os.path.join(script_directory,p)\
                                                      for p in to_mark[tag][0]]),
                             template_path)
-        except:
+        except Exception:
             print("Failed to create new file at: {}".format(filepath))
         
 
@@ -143,16 +143,16 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
     for q in questions:
         try:
             reset_file_q(filepath,q,to_mark[tag][2].get(q,''))
-        except:
+        except Exception:
             print("Failed to reset question {} in {}".format(q,filepath))
     if final_validate_source:
         try:
             reset_file_final_check(filepath)
-        except: print("Failed to reset master assert in {}".format(filepath))
+        except Exception: print("Failed to reset master assert in {}".format(filepath))
     try:   
         proc=sp.Popen([editor,filepath])
         proc.wait()
-    except:
+    except Exception:
         print("Error occurred editing document. Check that the correct appliction is selected.")
     finally:#check state of resulting file (must be called as counterpart to each reset)
         ret=[{},True,'']#{question:mark} for all validly marked questions. Bool indicates overall success
@@ -170,7 +170,7 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
         if final_validate_source:
             try:
                 ret[1]=ret[1] and do_file_final_check(filepath)    
-            except: 
+            except Exception: 
                 print("Failed to perform final source validation in {}".format(filepath))
                 ret[1]=False
         #inspect selected variables
@@ -180,7 +180,7 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
                 if marked:
                     ret[0][q]=score
                 else: ret[1]=False
-            except:
+            except Exception:
                 print("Failed to extract data for question {} in {}".format(q,filepath))
                 ret[1]=False
         #if source validation succeeded (incl final tests) set the hash of the output
@@ -225,14 +225,14 @@ def pre_build(to_mark,script_directory, template_path,compile_command,marked_suf
         filepath=os.path.join(filedir,tag+marked_suffix)
         try:#check file exists
             with open(filepath,'r'):pass
-        except:#create new file
+        except Exception:#create new file
             try:
                 make_from_template(filepath,'../'+tag,
                     mhsm.count_pdf_pages([os.path.join(script_directory,p) \
                                           for p in to_mark[tag][0]]),
                     template_path)
                 to_compile.append(tag+marked_suffix)
-            except:
+            except Exception:
                 print("Failed to create new file at: {}".format(filepath))
     batch_compile(filedir,to_compile,compile_command)
     

@@ -99,7 +99,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True,
                             
                     else:
                         print("Warning: originals modified for script {}".format(t))
-            except:
+            except Exception:
                 marked=False
         #add to to_mark
         if not marked:
@@ -133,7 +133,7 @@ def check_mod_timestamps(source_path,final_path, edit_epoch=0):
             return [True,last_time]
         return [False,0]
         
-    except:
+    except Exception:
         return [False,0]
 
 '''
@@ -156,7 +156,7 @@ def count_pdf_pages(file_paths):
         try:
             reader=ppdf.PdfFileReader(f)
             pages+=reader.getNumPages()
-        except:
+        except Exception:
             print("Could not count pages in {}".format(f))
     return pages
 '''

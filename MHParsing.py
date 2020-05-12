@@ -33,7 +33,7 @@ def nextToken(string):
         elif toks[0][0]=='\\':
             toktype='command'
         continue_from=string.find(toks[0])+len(toks[0])
-    except:
+    except Exception:
         return ['','other','']
     
     if toktype=='command':
@@ -109,7 +109,7 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
         try:                        
             tok=toks.pop(0)
             val=tok[0]
-        except: 
+        except Exception: 
             raise ParseError("Not enough tokens!")
         if tok[1]=='command':
             val=command_list[tok[0]](toks,
@@ -119,7 +119,7 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
         else: #assume other and try substitution
             try:
                 val=variables[tok[0]]
-            except: pass
+            except Exception: pass
         if not val==None:
             ret.append(val)
     return ret
@@ -146,7 +146,7 @@ def cmd_delnxtline(toks,
                        lines, cur_line, out_lines, variables):
     try:
         lines.pop(cur_line+1)
-    except:pass
+    except Exception:pass
     return None#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
     
 '''
@@ -169,7 +169,7 @@ def cmd_concat(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return vals[0]+vals[1]
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Concatenation failed!")
         
 '''
@@ -182,7 +182,7 @@ def cmd_addf(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return str(float(vals[0])+float(vals[1]))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Addition failed!")
         
 '''
@@ -195,7 +195,7 @@ def cmd_addd(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return str(int(vals[0])+int(vals[1]))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Addition failed!")
 
 '''
@@ -208,7 +208,7 @@ def cmd_and(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return str(int(vals[0]=='1' and vals[1]=='1'))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Boolean \'and\' failed!")
         
 '''
@@ -221,7 +221,7 @@ def cmd_not(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return str(int(not vals[0]=='1' ))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Boolean \'not\' failed!")
 
 '''
@@ -234,7 +234,7 @@ def cmd_or(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return str(int(vals[0]=='1' or vals[1]=='1'))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Boolean \'or\' failed!")
         
 '''
@@ -246,7 +246,7 @@ def cmd_eqq(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)
         return str(int(vals[0]==vals[1]))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("\'==\' failed!")
         
 '''
@@ -259,7 +259,7 @@ def cmd_assert_regex(toks,lines, cur_line, out_lines, variables):
                            lines, cur_line, out_lines, variables)[0]
         return str(int(len(re.findall(regex,lines[cur_line+1]))>0))
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Invalid/missing regex or missing line below! Regex = {}".format(regex))
 '''
 \setvar <key> <value>
@@ -272,7 +272,7 @@ def cmd_set_var(toks,lines, cur_line, out_lines, variables):
         assert_valid_varname(key)
         variables[key]=val
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Could not set variable!")
     
     return None
@@ -293,7 +293,7 @@ def cmd_echo_at(toks,lines, cur_line, out_lines, variables):
         at,string=interpret(toks,2,lines, cur_line, out_lines, variables)
         out_lines.insert(int(at),string+"\n")
     except ParseError: raise
-    except:
+    except Exception:
         raise ParseError("Echo_at failed. Check line numbers are valid")
     return None
 
@@ -311,7 +311,7 @@ def cmd_repeat(toks,lines, cur_line, out_lines, variables):
     try:
         num=int(interpret(toks,1,lines, cur_line, out_lines, variables)[0])
     except ParseError: raise
-    except: 
+    except Exception: 
         raise ParseError("Missing or invalid numerical argument for \r")
     toks_bkp=toks
     for n in range(num):

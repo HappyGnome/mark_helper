@@ -13,7 +13,7 @@ import os
 import MHScriptManagement as mhsm
 import MHEditManagement as mhem
 
-#import subprocess as sp
+# mport subprocess as sp
 #import PyPDF2 as ppdf
 
 
@@ -63,7 +63,7 @@ def cmd_config(args):#user update config file
     try:
         with open("MarkHelper.cfg","w") as config_file:
             json.dump(config,config_file)
-    except:
+    except Exception:
         print("Warning: Config not saved!")
     return True
 
@@ -82,7 +82,7 @@ def cmd_begin(args):#begin marking
             to_mark=mhsm.check_marking_state(script_directory,question_names,
                                         source_validate, numsep=config["numsep"],
                                         output_suffix=config["output suffix"])[0]#initialize to_mark from given script directory
-        except:
+        except Exception:
             raise#debug
             print("Failed to update marking state!")
             return True
@@ -94,7 +94,7 @@ def cmd_begin(args):#begin marking
             mhem.pre_build(to_mark,script_directory,config["template"],
                            config["compile_command"], marked_suffix=config["marked suffix"])
             print("Precompiling successful!")
-        except:
+        except Exception:
             #raise#debug
             print("Precompiling failed!")
         for tag in to_mark:
@@ -150,7 +150,7 @@ def cmd_build_n_check(args):
                                                    question_names,True,True,
                                                    numsep=config["numsep"],
                                         output_suffix=config["output suffix"])
-    except:
+    except Exception:
         print("Failed to update marking state!")
         return True
     
@@ -160,7 +160,7 @@ def cmd_build_n_check(args):
                            [tag+config["marked suffix"] for tag in to_mark],
                            config["compile_command"])
         print("Compiling successful!")
-    except:
+    except Exception:
         raise#debug
         print("Compiling failed!")
         return True
@@ -187,7 +187,7 @@ def cmd_makecsv(args):#begin marking
         if not input("File {} exists, overwrite? [y/n]: ".format(out_path)) in ['y','Y']:
             print("Operation cancelled.")
             return True
-    except: pass
+    except Exception: pass
     
     inp=input("Questions for which to extract marks (separated by spaces): ")
     question_names=inp.split()
@@ -199,7 +199,7 @@ def cmd_makecsv(args):#begin marking
                                                     question_names,True,True,
                                                    numsep=config["numsep"],
                                         output_suffix=config["output suffix"])#initialize to_mark from given script directory
-    except:
+    except Exception:
         print("Failed to read marking state!")
         return True
     
@@ -219,7 +219,7 @@ def cmd_makecsv(args):#begin marking
                 #print(done_mark[d])#debug
                 for q in question_names:
                     file.write(",{}".format(done_mark[d][4][1][q]))
-    except:
+    except Exception:
         print("Failed to write csv file.")
     return True
 
@@ -247,7 +247,7 @@ def cmd_make_merged_output(args):
             print("Some scripts missing marks or validation: ")
             print_some(to_mark)
             print("Please ensure all marking completed before merging.")
-    except:
+    except Exception:
         print("Failed to update marking state!")
         return True
     
@@ -265,7 +265,7 @@ def cmd_make_merged_output(args):
             for file in done_mark[d][0]:#constituent files                
                 mhsm.make_blank_pdf_like(os.path.join(script_directory,file),
                                          os.path.join(blankdir,file))
-        except:
+        except Exception:
             print("Warning! Failed to make blanks for {}".format(d))
     
     '''
@@ -279,7 +279,7 @@ def cmd_make_merged_output(args):
             mhem.copyFile(os.path.join(oldsourcedir,d+config["marked suffix"]),
                           new_source_path)
             to_compile.append(new_source)
-        except:
+        except Exception:
             print("Warning! Failed to copy source file for {}".format(d))
             
     '''
@@ -322,7 +322,7 @@ def parse_cmd(cmd):
     if toks[0] in handlers:
         try:
             return handlers[toks[0]](toks[1:])
-        except:
+        except Exception:
             raise#debug
             print("Problem occured in {}".format(toks[0]))
             return True
@@ -335,7 +335,7 @@ Initialization  ###############################################################
 try:#load config
     with open("MarkHelper.cfg","r") as config_file:
         config.update(json.load(config_file))
-except:
+except Exception:
     if not cmd_config(None):
         print("Failed to create config! Exiting...")
         sys.exit(1)    
