@@ -7,6 +7,11 @@ Created on Wed Apr  1 10:20:52 2020
 import re
 import copy
 
+import logging
+logger=logging.getLogger(__name__)
+
+import LogHelper
+
 '''
 return [tok, toktype, newstring] where tok is a substring of string, or '' if nothing found
 
@@ -33,7 +38,7 @@ def nextToken(string):
         elif toks[0][0]=='\\':
             toktype='command'
         continue_from=string.find(toks[0])+len(toks[0])
-    except Exception:
+    except IndexError:
         return ['','other','']
     
     if toktype=='command':
@@ -109,7 +114,7 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
         try:                        
             tok=toks.pop(0)
             val=tok[0]
-        except Exception: 
+        except IndexError: 
             raise ParseError("Not enough tokens!")
         if tok[1]=='command':
             val=command_list[tok[0]](toks,
@@ -119,7 +124,7 @@ def interpret(toks,n, lines, cur_line, out_lines, variables):
         else: #assume other and try substitution
             try:
                 val=variables[tok[0]]
-            except Exception: pass
+            except IndexError: pass
         if not val==None:
             ret.append(val)
     return ret
@@ -146,7 +151,7 @@ def cmd_delnxtline(toks,
                        lines, cur_line, out_lines, variables):
     try:
         lines.pop(cur_line+1)
-    except Exception:pass
+    except IndexError:pass
     return None#interpret(toks,1, lines, cur_line, out_lines, variables)[0]
     
 '''

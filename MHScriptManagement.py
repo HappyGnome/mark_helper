@@ -10,9 +10,13 @@ import os
 import json
 import numpy as np
 
+import logging
+logger=logging.getLogger(__name__)
+
 import PyPDF2 as ppdf
 
 import MHhash
+import LogHelper
 
 
 #return path for marked files relative to script directory
@@ -100,6 +104,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True,
                     else:
                         print("Warning: originals modified for script {}".format(t))
             except Exception:
+                LogHelper.print_and_log(logger,"Error occurred checking {}".format(t))
                 marked=False
         #add to to_mark
         if not marked:
@@ -133,7 +138,10 @@ def check_mod_timestamps(source_path,final_path, edit_epoch=0):
             return [True,last_time]
         return [False,0]
         
-    except Exception:
+    except OSError:
+        LogHelper.print_and_log(logger,
+                                "Failed to check timestamps for {} or {}"
+                                .format(source_path,final_path))
         return [False,0]
 
 '''
@@ -156,8 +164,10 @@ def count_pdf_pages(file_paths):
         try:
             reader=ppdf.PdfFileReader(f)
             pages+=reader.getNumPages()
-        except Exception:
-            print("Could not count pages in {}".format(f))
+        except (ppdf.PdfReadError, OSError):
+            LogHelper.print_and_log(logger,
+                                    "Could not count pages in {}"
+                                    .format(f))
     return pages
 '''
 call when marking of script with given tag deemed complete/partially complete.

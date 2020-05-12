@@ -9,6 +9,11 @@ Methods involving creating and editing marked documents
 import os
 import subprocess as sp
 
+import logging
+logger=logging.getLogger(__name__)
+
+import LogHelper
+
 import MHhash
 import MHParsing as mhp
 import MHScriptManagement as mhsm
@@ -126,17 +131,18 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
     try:#check file exists
         with open(filepath,'r'):pass
         
-        try:#get time of last change if output file exists and newer than source
-            _,edit_epoch=mhsm.check_mod_timestamps(filepath,final_path)
-        except Exception: pass
-    except Exception:#create new file
+        #get time of last change if output file exists and newer than source
+        _,edit_epoch=mhsm.check_mod_timestamps(filepath,final_path)
+    except OSError:#create new file
         try:
             make_from_template(filepath,'../'+tag,
                             mhsm.count_pdf_pages([os.path.join(script_directory,p)\
                                                      for p in to_mark[tag][0]]),
                             template_path)
         except Exception:
-            print("Failed to create new file at: {}".format(filepath))
+            LogHelper.print_and_log(logger,
+                                    "Failed to create new file at: {}"
+                                    .format(filepath))
         
 
     #reset all variables to inspect later
@@ -144,16 +150,24 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
         try:
             reset_file_q(filepath,q,to_mark[tag][2].get(q,''))
         except Exception:
-            print("Failed to reset question {} in {}".format(q,filepath))
+            LogHelper.print_and_log(logger,
+                                    "Failed to reset question {} in {}"
+                                    .format(q,filepath))
     if final_validate_source:
         try:
             reset_file_final_check(filepath)
-        except Exception: print("Failed to reset master assert in {}".format(filepath))
+        except Exception: 
+            LogHelper.print_and_log(logger,
+                                    "Failed to reset master assert in {}"
+                                    .format(filepath))
     try:   
         proc=sp.Popen([editor,filepath])
         proc.wait()
     except Exception:
-        print("Error occurred editing document. Check that the correct appliction is selected.")
+        LogHelper.print_and_log(logger,
+                                "Error occurred editing document."+
+                                " Check that the correct appliction is"+
+                                " selected.")
     finally:#check state of resulting file (must be called as counterpart to each reset)
         ret=[{},True,'']#{question:mark} for all validly marked questions. Bool indicates overall success
         output_hash=''#set to indicate output checks passed (but will not be returned unless source also validated)
@@ -171,8 +185,10 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
             try:
                 ret[1]=ret[1] and do_file_final_check(filepath)    
             except Exception: 
-                print("Failed to perform final source validation in {}".format(filepath))
-                ret[1]=False
+               LogHelper.print_and_log(logger,
+                                       "Failed to perform final source"+
+                                       " validation in {}".format(filepath))
+               ret[1]=False
         #inspect selected variables
         for q in questions:
             try:
@@ -181,7 +197,9 @@ def make_user_mark(tag, to_mark,script_directory,template_path, questions=[],
                     ret[0][q]=score
                 else: ret[1]=False
             except Exception:
-                print("Failed to extract data for question {} in {}".format(q,filepath))
+                LogHelper.print_and_log(logger,
+                                        "Failed to extract data for question "+
+                                        "{} in {}".format(q,filepath))
                 ret[1]=False
         #if source validation succeeded (incl final tests) set the hash of the output
         if ret[1] and final_validate_source:ret[2]=output_hash
@@ -225,7 +243,7 @@ def pre_build(to_mark,script_directory, template_path,compile_command,marked_suf
         filepath=os.path.join(filedir,tag+marked_suffix)
         try:#check file exists
             with open(filepath,'r'):pass
-        except Exception:#create new file
+        except OSError:#create new file
             try:
                 make_from_template(filepath,'../'+tag,
                     mhsm.count_pdf_pages([os.path.join(script_directory,p) \
@@ -233,7 +251,9 @@ def pre_build(to_mark,script_directory, template_path,compile_command,marked_suf
                     template_path)
                 to_compile.append(tag+marked_suffix)
             except Exception:
-                print("Failed to create new file at: {}".format(filepath))
+                LogHelper.print_and_log(logger,
+                                        "Failed to create new file at: {}"
+                                        .format(filepath))
     batch_compile(filedir,to_compile,compile_command)
     
 '''
