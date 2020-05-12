@@ -11,12 +11,14 @@ import json
 import numpy as np
 
 import logging
-logger=logging.getLogger(__name__)
+
 
 import PyPDF2 as ppdf
 
-import MHhash
-import LogHelper
+import mh_hash
+import loghelper
+
+logger=logging.getLogger(__name__)
 
 
 #return path for marked files relative to script directory
@@ -78,7 +80,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True,
 
     for t in to_mark_temp:
         to_mark_temp[t]=[to_mark_temp[t],'',{},False,'']#input hash,question marks,source validate flag, output hash
-        files_hash=MHhash.hash_file_list(to_mark_temp[t][0], script_directory)
+        files_hash=mh_hash.hash_file_list(to_mark_temp[t][0], script_directory)
         marked=False#file exists and all questions marked?
         #check for matching .mkh file
         if t+'.mkh' in script_files_raw:
@@ -96,7 +98,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True,
                                 marked=False
                                 break
                         if match_outhash:
-                            outhash=MHhash.hash_file_list([t+output_suffix],
+                            outhash=mh_hash.hash_file_list([t+output_suffix],
                                                get_marked_path(script_directory))
                             #outhash valid and matches saved value
                             marked=marked and outhash==mkh_data[4][0] and outhash
@@ -104,7 +106,7 @@ def check_marking_state(script_directory,questions=[], final_assert=True,
                     else:
                         print("Warning: originals modified for script {}".format(t))
             except Exception:
-                LogHelper.print_and_log(logger,"Error occurred checking {}".format(t))
+                loghelper.print_and_log(logger,"Error occurred checking {}".format(t))
                 marked=False
         #add to to_mark
         if not marked:
@@ -139,7 +141,7 @@ def check_mod_timestamps(source_path,final_path, edit_epoch=0):
         return [False,0]
 
     except OSError:
-        LogHelper.print_and_log(logger,
+        loghelper.print_and_log(logger,
                                 "Failed to check timestamps for {} or {}"
                                 .format(source_path,final_path))
         return [False,0]
@@ -166,7 +168,7 @@ def count_pdf_pages(file_paths):
             reader=ppdf.PdfFileReader(f)
             pages+=reader.getNumPages()
         except (ppdf.PdfReadError, OSError):
-            LogHelper.print_and_log(logger,
+            loghelper.print_and_log(logger,
                                     "Could not count pages in {}"
                                     .format(f))
     return pages

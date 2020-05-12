@@ -8,10 +8,11 @@ import re
 import copy
 
 import logging
+
+
+import loghelper
+
 logger=logging.getLogger(__name__)
-
-import LogHelper
-
 '''
 return [tok, toktype, newstring] where tok is a substring of string, or '' if nothing found
 

@@ -11,12 +11,14 @@ import sys
 import os
 
 import logging
+
+
+import loghelper
+import mh_script_management as mhsm
+import mh_edit_management as mhem
+
 logger=logging.getLogger(__name__)
 logging.basicConfig(filename="Log.txt")
-
-import LogHelper
-import MHScriptManagement as mhsm
-import MHEditManagement as mhem
 
 # mport subprocess as sp
 #import PyPDF2 as ppdf
@@ -71,7 +73,7 @@ def cmd_config(args):#user update config file
         with open("MarkHelper.cfg","w") as config_file:
             json.dump(config,config_file)
     except Exception:
-        LogHelper.print_and_log(logger,"Warning: Config not saved!")
+        loghelper.print_and_log(logger,"Warning: Config not saved!")
     return True
 
 def cmd_begin(args):#begin marking 
@@ -90,7 +92,7 @@ def cmd_begin(args):#begin marking
                                         source_validate, numsep=config["numsep"],
                                         output_suffix=config["output suffix"])[0]#initialize to_mark from given script directory
         except Exception:
-            LogHelper.print_and_log(logger,
+            loghelper.print_and_log(logger,
                                     "Failed to update marking state!")
             return True
         if to_mark=={}:
@@ -102,7 +104,7 @@ def cmd_begin(args):#begin marking
                            config["compile_command"], marked_suffix=config["marked suffix"])
             print("Precompiling successful!")
         except Exception:
-            LogHelper.print_and_log(logger,"Precompiling failed!")
+            loghelper.print_and_log(logger,"Precompiling failed!")
         for tag in to_mark:
             print("Now marking "+tag)
             quit_flag=not mhem.mark_one_loop(tag,to_mark,script_directory,
@@ -157,7 +159,7 @@ def cmd_build_n_check(args):
                                                    numsep=config["numsep"],
                                         output_suffix=config["output suffix"])
     except Exception:
-        LogHelper.print_and_log(logger,"Failed to update marking state!")
+        loghelper.print_and_log(logger,"Failed to update marking state!")
         return True
     
     try:#compile
@@ -167,7 +169,7 @@ def cmd_build_n_check(args):
                            config["compile_command"])
         print("Compiling successful!")
     except Exception:
-        LogHelper.print_and_log(logger,"Compiling failed!")
+        loghelper.print_and_log(logger,"Compiling failed!")
         return True
     for tag in to_mark:
         print("Now checking "+tag)
@@ -205,7 +207,7 @@ def cmd_makecsv(args):#begin marking
                                                    numsep=config["numsep"],
                                         output_suffix=config["output suffix"])#initialize to_mark from given script directory
     except Exception:
-        LogHelper.print_and_log(logger,"Failed to read marking state!")
+        loghelper.print_and_log(logger,"Failed to read marking state!")
         return True
     
     if to_mark!={}:
@@ -225,7 +227,7 @@ def cmd_makecsv(args):#begin marking
                 for q in question_names:
                     file.write(",{}".format(done_mark[d][4][1][q]))
     except Exception:
-        LogHelper.print_and_log(logger,"Failed to write csv file.")
+        loghelper.print_and_log(logger,"Failed to write csv file.")
     return True
 
 '''
@@ -253,7 +255,7 @@ def cmd_make_merged_output(args):
             print_some(to_mark)
             print("Please ensure all marking completed before merging.")
     except Exception:
-        LogHelper.print_and_log(logger,"Failed to update marking state!")
+        loghelper.print_and_log(logger,"Failed to update marking state!")
         return True
     
     '''
@@ -271,7 +273,7 @@ def cmd_make_merged_output(args):
                 mhsm.make_blank_pdf_like(os.path.join(script_directory,file),
                                          os.path.join(blankdir,file))
         except Exception:
-            LogHelper.print_and_log(logger,"Warning! Failed to make blanks for {}".format(d))
+            loghelper.print_and_log(logger,"Warning! Failed to make blanks for {}".format(d))
     
     '''
     copy source files
@@ -285,7 +287,7 @@ def cmd_make_merged_output(args):
                           new_source_path)
             to_compile.append(new_source_path)
         except Exception:
-            LogHelper.print_and_log(logger,"Warning! Failed to copy source file for {}".format(d))
+            loghelper.print_and_log(logger,"Warning! Failed to copy source file for {}".format(d))
              
     '''
     compile source files
@@ -304,7 +306,7 @@ def cmd_make_merged_output(args):
             mhsm.merge_pdfs(d[0], overlay_filepath, merged_filepath,
                             script_directory)
         except Exception:
-            LogHelper.print_and_log(logger,
+            loghelper.print_and_log(logger,
                                     "Warning! Failed to merge output for {}"
                                     .format(d))
     return True
@@ -328,7 +330,7 @@ def parse_cmd(cmd):
         try:
             return handlers[toks[0]](toks[1:])
         except Exception:
-            LogHelper.print_and_log(logger,"Problem occured in {}".format(toks[0]))
+            loghelper.print_and_log(logger,"Problem occured in {}".format(toks[0]))
             return True
     else: 
         print("Unrecognized command!")
@@ -341,7 +343,7 @@ try:#load config
         config.update(json.load(config_file))
 except Exception:
     if not cmd_config(None):
-        LogHelper.print_and_log(logger,"Failed to create config! Exiting...")
+        loghelper.print_and_log(logger,"Failed to create config! Exiting...")
         sys.exit(1)    
 '''
 Main CLI loop  ################################################################
