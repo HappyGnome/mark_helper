@@ -175,15 +175,18 @@ class Config:
 
         '''
         if gethelp:
-            dets = "Use \'config all\' or \'config <section>\' with <section> being:"
+            dets = "Use \'config all\' or \'config <section>\' with " + \
+                   "<section> being:"
             for sec in self._categories:
                 dets = dets+"\n\t"+sec
-            return ["Edit current configuration", dets+"\nConfiguration options you are"+\
-                    " prompted for can be left blank to keep the current setting."]
+            return ["Edit current configuration", dets +
+                    "\nConfiguration options you are prompted for can be" +
+                    " left blank to keep the current setting."]
 
-
-        if len(args) < 1 or not (args[0] in self._categories or args[0] == 'all'):
-            print("Config section not found. "+self.cmd_config([], True)[1])#help text
+        if len(args) < 1 or not (args[0] in self._categories
+                                 or args[0] == 'all'):
+            # help text
+            print("Config section not found. "+self.cmd_config([], True)[1])
             return True
         for cat in self._categories:
             if args[0] == cat or args[0] == 'all':
