@@ -49,7 +49,7 @@ class MarkingConfig(config.Config):
         self.add_property("marking", "output suffix", value="_m.pdf",
                           prompt="Suffix for marked output files e.g." +
                           "\'_m.pdf\': ")
-        self.add_property("marking", "compite command", value="_m.tex",
+        self.add_property("marking", "compile command", value="pdflatex",
                           prompt="Compile command (e.g. \'pdflatex\' to" +
                           " run \'pdflatex <source file>\'):")
         self.add_category("merge")
@@ -60,6 +60,48 @@ class MarkingConfig(config.Config):
                           prompt="Sub-directory used to prepare for merge: ")
         self.add_property("merge", "final directory", value="final",
                           prompt="Sub-directory where final output appears: ")
+        
+    # handy access functions
+    def numsep(self):
+        return self._categories["script"]["numsep"]
+    def script_suffix(self):
+        return self._categories["script"]["suffix"]
+    def script_dir(self):
+        return self._categories["script"]["directory"]
+    def editor(self):
+        return self._categories["marking"]["editor"]
+    def template(self):
+        return self._categories["marking"]["template"]
+    def marking_dir(self):
+        return os.path.join(self.script_dir(),self._categories["marking"]["directory"])
+    def marked_suffix(self):
+        return self._categories["marking"]["marked suffix"]
+    def output_suffix(self):
+        return self._categories["marking"]["output suffix"]
+    def compile_command(self):
+        return self._categories["marking"]["compile command"]
+    def merged_suffix(self):
+        return self._categories["merge"]["merged suffix"]
+    def merged_dir(self):
+        return os.path.join(self.script_dir(), 
+                            self._categories["merge"]["merge directory"])
+    def merged_sourcedir(self):
+        return os.path.join(self.merged_dir(),"source")    
+    def final_dir(self):
+        return self._categories["merge"]["final directory"]
+    
+    def tag_to_sourcepath(self,tag):
+        return os.path.join(self.marking_dir(),tag+self.marked_suffix())
+    def tag_to_outputpath(self,tag):
+        return os.path.join(self.marking_dir(),tag+self.output_suffix())
+    def tag_to_mergesource(self,tag):
+        return os.path.join(self.merged_sourcedir(),
+                            tag+self.marked_suffix())
+    def tag_to_mergeoutput(self,tag):
+        return os.path.join(self.merged_dir(),
+                            tag+self.output_suffix())
+    def tag_to_mergefinal(self,tag):
+        return os.path.join(self.final_dir(), tag+self.merged_suffix())
 
 
 def get_script_list(cfg):
@@ -74,13 +116,12 @@ def get_script_list(cfg):
     script_directory e.g. script1.pdf  => tag = script1, and file_list is a
     list of the files (pdfs) that comprise the script
     '''
-    script_directory = cfg.get_property("script", "directory")
-    numsep = cfg.get_property("script", "numsep")
-    suffix = cfg.get_property("script", "suffix")
 
     ret = {}
 
-    script_files_raw = os.listdir(script_directory)
+    script_files_raw = os.listdir(cfg.script_dir())
+    suffix = cfg.script_suffix()
+    
     # extract only pdfs and strip '.pdf'
     script_files_pdf = [f[:-len(suffix)] for f in script_files_raw
                         if f.endswith(suffix)]
@@ -89,7 +130,7 @@ def get_script_list(cfg):
     # add file names to list, accounting for doc numbers
     for scr in script_files_pdf:
         tag = scr  # default tag in to_mark
-        sep_ind = scr.rfind(numsep)  # look for trailing number
+        sep_ind = scr.rfind(cfg.numsep())  # look for trailing number
         if sep_ind > 0:  # sep found in valid place
             if scr[sep_ind+1:].isnumeric():
                 tag = scr[:sep_ind]
@@ -129,28 +170,29 @@ def check_marking_state(cfg, questions=None, final_assert=True,
     file
     '''
 
-    script_directory = cfg.get_property("script", "directory")
+    script_directory = cfg.script_dir()
     if not questions:
         questions = []
 
     to_mark_temp = get_script_list(cfg)
+    ret = [{}, {}]  # to_mark, done_mark
 
-    for tmt in to_mark_temp:
+    for tag in to_mark_temp:
         # input hash, question marks, source validate flag, output hash
-        to_mark_temp[tmt] = [to_mark_temp[tmt], '', {}, False, '']
-        files_hash = mh_hash.hash_file_list(to_mark_temp[tmt][0],
+        to_mark_temp[tag] = [to_mark_temp[tag], '', {}, False, '']
+        files_hash = mh_hash.hash_file_list(to_mark_temp[tag][0],
                                             script_directory)
         marked = False  # file exists and all questions marked?
         # check for matching .mkh file
-        if tmt+'.mkh' in os.listdir(script_directory):
+        if tag+'.mkh' in os.listdir(script_directory):
             try:
-                with open(os.path.join(script_directory, tmt+".mkh"),
+                with open(os.path.join(script_directory, tag+".mkh"),
                           "r")as mkh:
                     mkh_data = json.load(mkh)
                     # extract non-hash, non-path data
-                    to_mark_temp[tmt][2:] = mkh_data[2:]
+                    to_mark_temp[tag][2:] = mkh_data[2:]
                     # if hashes don't match it's not marked!
-                    if mkh_data[:2] == [to_mark_temp[tmt][0], files_hash]:
+                    if mkh_data[:2] == [to_mark_temp[tag][0], files_hash]:
                         marked = mkh_data[3] or not final_assert
                         marklist = mkh_data[2]
                         #  in output validation mode
@@ -164,29 +206,27 @@ def check_marking_state(cfg, questions=None, final_assert=True,
                                 break
                         if match_outhash:
                             outhash = mh_hash.hash_file_list(
-                                [tmt + cfg.get_property("marking",
-                                                        "output suffix")],
-                                cfg.get_property("marking", "directory"))
+                                [tag + cfg.output_suffix()],
+                                cfg.marking_dir())
                             # outhash valid and matches saved value
                             marked = marked and outhash == \
                                 mkh_data[4][0] and outhash
 
                     else:
                         print("Warning: originals modified for script {}"
-                              .format(tmt))
+                              .format(tag))
             except (OSError, TypeError, ValueError):
                 loghelper.print_and_log(logger, "Error occurred checking {}"
-                                        .format(tmt))
+                                        .format(tag))
                 marked = False
 
-        ret = [{}, {}]  # to_mark, done_mark
         # add to to_mark
         if not marked:
-            ret[0][tmt] = to_mark_temp[tmt]
-            ret[0][tmt][1] = files_hash
+            ret[0][tag] = to_mark_temp[tag]
+            ret[0][tag][1] = files_hash
         else:
-            ret[1][tmt] = to_mark_temp[tmt]
-            ret[1][tmt][1] = files_hash
+            ret[1][tag] = to_mark_temp[tag]
+            ret[1][tag][1] = files_hash
     return ret
 
 
@@ -276,7 +316,7 @@ def count_pdf_pages(file_paths):
     return pages
 
 
-def declare_marked(tag, script_directory, to_mark):
+def declare_marked(tag,to_mark,cfg):
     '''
     To be called when marking state of script with given tag deemed to have
     changed. Create/update associated mkh file
@@ -290,7 +330,8 @@ def declare_marked(tag, script_directory, to_mark):
     to_mark : dictionary of mkh entry data for current doc list
     (tag is a key for this)
     '''
-    with open(os.path.join(script_directory, tag+".mkh"), "w") as mkh:
+    with open(os.path.join(cfg.script_dir(),
+                           tag+".mkh"), "w") as mkh:
         json.dump(to_mark[tag], mkh)
 
 

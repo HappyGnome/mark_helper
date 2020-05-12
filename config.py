@@ -9,7 +9,7 @@ import json
 import logging
 
 
-import LogHelper
+import loghelper
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ class Config:
             with open(self.path, "w") as config_file:
                 json.dump(self._categories, config_file)
         except (OSError, TypeError, ValueError):
-            LogHelper.print_and_log(logger, "Warning: Config not saved!")
+            loghelper.print_and_log(logger, "Warning: Config not saved!")
         return True
 
 

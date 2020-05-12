@@ -54,7 +54,7 @@ def nextToken(string):
     # determine type:
     toks = string.split()
     toktype = 'other'
-    continue_from = 0# index of first character after parsed content
+    continue_from = 0  # index of first character after parsed content
     try:
         if toks[0][0] == '\'':
             toktype = 'literal'

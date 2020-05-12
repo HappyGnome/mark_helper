@@ -9,9 +9,16 @@ import os
 import hashlib
 
 
-#read each file in the list "files" and return a hash of entire stream
-#return hex digest of the hash
-def hash_file_list(files, directory=''): 
+
+def hash_file_list(files, directory=''):
+    '''
+    read each file in the list `files` contained in `directory` and return
+    a hash of entire stream
+
+    Returns
+    -------
+    hex digest of the hashed files
+    '''
     buf_size=2048#bytes
     the_hash=hashlib.sha256()
     #print(files)#debug
@@ -20,7 +27,7 @@ def hash_file_list(files, directory=''):
             while True:#until eof
                 chunk=the_file.read(buf_size)
                 if len(chunk)==0: break
-                the_hash.update(chunk)            
+                the_hash.update(chunk)
     return the_hash.hexdigest()
 
 
@@ -29,4 +36,4 @@ def hash_file_list(files, directory=''):
 '''
 if __name__=='__main__':
     #print(hash_file_list(["HashTest/f1.txt","HashTest/f2.txt","HashTest/f3.txt"]))
-    pass  
+    pass
