@@ -1,0 +1,6 @@
+\documentclass{article}
+
+\usepackage[source=../PaperPad, margin=0cm]{markpage}
+\mnothDefaults{colour=blue}
+
+\begin{document}
