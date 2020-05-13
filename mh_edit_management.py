@@ -193,10 +193,6 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
     try:  # check file exists
         with open(sourcefile, 'r'):
             pass
-
-        # get time of last change if output file exists and newer than source
-        _, edit_epoch = mhsm.check_mod_timestamps(sourcefile,
-                                                  cfg.tag_to_outputpath(tag))
     except OSError:  # create new file
         try:
             make_from_template(sourcefile, '../'+tag,
@@ -225,6 +221,13 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
             loghelper.print_and_log(logger,
                                     "Failed to reset master assert in {}"
                                     .format(sourcefile))
+    # get time of last change if output file exists and newer than source
+    old_edit_epoch = -1
+    try:
+        old_edit_epoch = mhsm.get_edit_epoch([sourcefile,
+                                              cfg.tag_to_outputpath(tag)])
+    except OSError:
+        pass  # old_edit_epoch=-1 already signifies it's not valid
     try:
         proc = sp.Popen([cfg.editor(),
                          sourcefile])
@@ -248,10 +251,15 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
             # do this first or timestamps change
             # ignore edits before edit_epoch (start of this method)
             # if applicable
-            if not mhsm.check_mod_timestamps(sourcefile,
-                                             cfg.tag_to_outputpath(tag),
-                                             edit_epoch):
-                print("Remember to compile after saving!")
+            new_edit_epoch = old_edit_epoch+1
+            try:
+                new_edit_epoch =\
+                    mhsm.get_edit_epoch([sourcefile,
+                                         cfg.tag_to_outputpath(tag)])
+            except OSError:
+                pass  # the following will fail by default. It's okay
+            if old_edit_epoch < new_edit_epoch:
+                print("Files edited. They should be checked again...")
             else:  # generate hash (also warn about page counts)
                 if not mhsm.check_page_counts(
                         [os.path.join(cfg.script_dir(), p)
@@ -340,14 +348,14 @@ def batch_compile_and_check(directory, tags, cfg, comp_if_output_exists=True):
     Parameters
     ----------
     directory : source file directory (also directory in which to run
-                                       cfg.compile_command() )
+    cfg.compile_command() )
 
     tags : iterable yielding prefixes of source files/output files
 
     cfg : MarkingConfig - used to add source and output suffixes to the tags
-    
+
     comp_if_output_exists : if True (default) try to compile all source files
-        otherwise check which already exist and ignore those.
+    indicated by `tags`. Otherwise check which already exist and ignore those.
 
     Returns
     -------
@@ -366,7 +374,7 @@ def batch_compile_and_check(directory, tags, cfg, comp_if_output_exists=True):
                     pass
             except Exception:
                 newtags.append(tag)
-        tags=newtags
+        tags = newtags
     source_filelist = [tag + cfg.marked_suffix() for tag in tags]
     output_filelist = [tag + cfg.output_suffix() for tag in tags]
     batch_compile(directory, source_filelist, cfg.compile_command())
@@ -408,7 +416,7 @@ def pre_build(to_mark, cfg):
 
 
 def mark_one_loop(tag, to_mark, cfg, question_names=None,
-                  source_validate=False, output_validate=False):#TODO make output validation fail if modified
+                  source_validate=False, output_validate=False):
     '''
     Perform loop to mark one script (or until user quits/skips file)
     Try to mark script `tag` in `to_mark`

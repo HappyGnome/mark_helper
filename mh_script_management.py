@@ -305,45 +305,20 @@ def check_marking_state(cfg, questions=None, final_assert=True,
     return ret
 
 
-def check_mod_timestamps(source_path, final_path, edit_epoch=0):
+def get_edit_epoch(paths):
     """
-    Do extra checks on timestamps for source (e.g. latex) file and final pdf
-    output (If source has been modified since last compilation then latest
-    changes may not  be reflected)
-
-    if neither has changed since time edit_epoch then the test passes in any
-    case
+    Return maximum modification timestamp among files at a list of directories
 
     Parameters
     ----------
-    source_path : string
-
-    final_path : string
-
-    edit_epoch : int - cutoff time
+    paths : list of strings specifying the filepaths to check
 
     Returns
     ------
-    [res, mtime] :
-        res = False if modification dates are in the wrong order
-
-        mtime =  last tie that one of the files was modified or 0 if
-        res == False
+    result of os.stat(...).st_mtime called on last modified file
     """
-    try:
-        src_stat = os.stat(source_path)
-        fin_stat = os.stat(final_path)
-        # print("{} {}".format(src_stat.st_mtime, fin_stat.st_mtime))# debug
-        last_time = max(src_stat.st_mtime, fin_stat.st_mtime)
-        if last_time <= edit_epoch or fin_stat.st_mtime == last_time:
-            return [True, last_time]
-        return [False, 0]
-
-    except OSError:
-        loghelper.print_and_log(logger,
-                                "Failed to check timestamps for {} or {}"
-                                .format(source_path, final_path))
-        return [False, 0]
+    times=[os.stat(path).st_mtime for path in paths]
+    return max(times)
 
 
 def check_page_counts(input_pdf_paths, output_pdf_path):

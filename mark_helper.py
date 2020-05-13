@@ -103,42 +103,49 @@ def cmd_build_n_check(args):#TODO detect changes and rebuild-check etc
                 "(separated by spaces): ")
     question_names = inp.split()
 
-    print("Checking marking state...")
-    try:
-        # check for scripts with unmarked questions (from list) or which
-        # have not had the source validated
-        to_mark, done_mark = mhsm.check_marking_state(g_config,
-                                                      question_names,
-                                                      True, False)
-        if to_mark != {}:
-            print("Some scripts missing marks or validation: ")
-            print_some(to_mark)
+    quit_flag=False
+    while not quit_flag:
+        print("Checking marking state...")
+        try:
+            # check for scripts with unmarked questions (from list) or which
+            # have not had the source validated
+            to_mark, done_mark = mhsm.check_marking_state(g_config,
+                                                          question_names,
+                                                          True, False)
+            if to_mark != {}:
+                print("Some scripts missing marks or validation: ")
+                print_some(to_mark)
+                return True
+            # now all scripts validly marked
+            # get all of those that need user to check output
+            to_mark, done_mark = mhsm.check_marking_state(g_config,
+                                                          question_names,
+                                                          True, True)
+        except Exception:
+            loghelper.print_and_log(logger, "Failed to update marking state!")
             return True
-        # now all scripts validly marked
-        # get all of those that need user to check output
-        to_mark, done_mark = mhsm.check_marking_state(g_config,
-                                                      question_names,
-                                                      True, True)
-    except Exception:
-        loghelper.print_and_log(logger, "Failed to update marking state!")
-        return True
 
-    try:  # compile
-        print("Compiling...")
-        mhem.batch_compile_and_check(g_config.marking_dir(), to_mark, g_config)
-        print("Compiling successful!")
-    except Exception:
-        loghelper.print_and_log(logger, "Compiling failed!")
-        return True
-    for tag in to_mark:
-        print("Now checking " + tag)
-        quit_flag = not mhem.mark_one_loop(tag, to_mark, g_config,
-                                           question_names,
-                                           True, True)
-        # update marking state in file
-        mhsm.declare_marked(tag, to_mark, g_config)
-        if quit_flag:
+        if to_mark == {}:
+            print("Checking complete!")
             break
+
+        try:  # compile
+            print("Compiling...")
+            mhem.batch_compile_and_check(g_config.marking_dir(), to_mark,
+                                         g_config)
+            print("Compiling successful!")
+        except Exception:
+            loghelper.print_and_log(logger, "Compiling failed!")
+            return True
+        for tag in to_mark:
+            print("Now checking " + tag)
+            quit_flag = not mhem.mark_one_loop(tag, to_mark, g_config,
+                                               question_names,
+                                               True, True)
+            # update marking state in file
+            mhsm.declare_marked(tag, to_mark, g_config)
+            if quit_flag:
+                break
     return True
 
 
@@ -163,8 +170,6 @@ def cmd_reset_validation(args):
             loghelper.print_and_log(logger, "Warning! Failed to reset " +
                                     "validation for {}".format(tag))
     return True
-
-#TODO: make check loop until all files pass validation
 
 def cmd_makecsv(args):
     '''
