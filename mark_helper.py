@@ -64,6 +64,7 @@ def cmd_begin(args):
         try:  # precompile
             print("Precompiling...")
             mhem.pre_build(to_mark, g_config)
+
             print("Precompiling successful!")
         except Exception:
             loghelper.print_and_log(logger, "Precompiling failed!")
@@ -124,9 +125,7 @@ def cmd_build_n_check(args):
 
     try:  # compile
         print("Compiling...")
-        mhem.batch_compile(g_config.marking_dir(),
-                           [tag + g_config.marked_suffix() for tag in to_mark],
-                           g_config.compile_command())
+        mhem.batch_compile_and_check(g_config.marking_dir(), to_mark, g_config)
         print("Compiling successful!")
     except Exception:
         loghelper.print_and_log(logger, "Compiling failed!")
@@ -249,9 +248,9 @@ def cmd_make_merged_output(args):
     to_compile = []
     for d in done_mark:
         try:
-            new_source_path = g_config.tag_to_mergesource(d)
-            mhem.copyFile(g_config.tag_to_sourcepath(d), new_source_path)
-            to_compile.append(new_source_path)
+            mhem.copyFile(g_config.tag_to_sourcepath(d),
+                          g_config.tag_to_mergesource(d))
+            to_compile.append(d)
         except Exception:
             loghelper.print_and_log(logger, "Warning! Failed to copy source " +
                                     "file for {}".format(d))
@@ -259,7 +258,7 @@ def cmd_make_merged_output(args):
     '''
     compile source files
     '''
-    mhem.batch_compile(newsourcedir, to_compile, g_config.compile_command())
+    mhem.batch_compile_and_check(newsourcedir, to_compile, g_config)
 
     '''
     Merge files

@@ -473,7 +473,7 @@ def merge_pdfs(files_below, file_above, out_path, below_dir=''):
     files_below : list of strings
         Paths to the pdfs to use as base layer. files_below[0] contains page 1
         etc...
-        full paths, or paths relative to below_dir
+        full paths, or paths relative to below_dir, if set
     file_above : string
         full path to pdf to overlay
     out_path : string

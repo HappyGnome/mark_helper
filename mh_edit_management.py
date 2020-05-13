@@ -316,6 +316,51 @@ def batch_compile(directory, files, compile_command):
         os.chdir(here)
 
 
+def batch_check_exist(directory, files):
+    '''
+    Try to open each file listed in `files` in folder `directory`. This
+    is a basic check that e.g. a batch compilation has succeeded
+    (though not sufficient in itself of course).
+
+    OSError will occur from trying to open one of the files if it doesn't exist
+    '''
+    for file in files:
+        try:
+            with open(os.path.join(directory, file)):
+                pass
+        except Exception:
+            print("Compiled file {} not available!".format(file))
+            raise
+
+
+def batch_compile_and_check(directory, tags, cfg):
+    """
+    Run a batch compile and batch check
+
+    Parameters
+    ----------
+    directory : source file directory (also directory in which to run
+                                       cfg.compile_command() )
+
+    tags : iterable yielding prefixes of source files/output files
+
+    cfg : MarkingConfig - used to add source and output suffixes to the tags
+
+    Returns
+    -------
+    None.
+
+    Raises
+    ------
+    May raise e.g. OSError on failed check or other exceptions from batch
+    compilation
+    """
+    source_filelist = [tag + cfg.marked_suffix() for tag in tags]
+    output_filelist = [tag + cfg.output_suffix() for tag in tags]
+    batch_compile(directory, source_filelist, cfg.compile_command())
+    batch_check_exist(directory, output_filelist)
+
+
 def pre_build(to_mark, cfg):
     '''
     Create tex files for marking all scripts in to_mark
@@ -344,12 +389,12 @@ def pre_build(to_mark, cfg):
                                    ([os.path.join(cfg.script_dir(), p)
                                      for p in to_mark[tag][0]]),
                                    cfg.template())
-                to_compile.append(tag+cfg.marked_suffix())
+                to_compile.append(tag)
             except Exception:
                 loghelper.print_and_log(logger,
                                         "Failed to create new file at: {}"
                                         .format(filepath))
-    batch_compile(cfg.marking_dir(), to_compile, cfg.compile_command())
+    batch_compile_and_check(cfg.marking_dir(), to_compile, cfg)
 
 
 def mark_one_loop(tag, to_mark, cfg, question_names=None,
