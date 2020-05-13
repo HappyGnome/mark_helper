@@ -6,10 +6,8 @@ Date 01/04/2020
 
 Tool to help streamline marking pdf scripts in tex
 '''
-import json
-import sys
-import os
 
+import os
 import logging
 
 
@@ -17,37 +15,10 @@ import loghelper
 import mh_script_management as mhsm
 import mh_edit_management as mhem
 
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 logging.basicConfig(filename="Log.txt")
 
-# mport subprocess as sp
-#import PyPDF2 as ppdf
-
-
-#load config or create it
-'''config = {"editor":"texworks.exe", "numsep":"_", "template":'mkh_template.tex',\
-        "marked suffix":"_marked.tex", "output suffix":"_marked.pdf",\
-        "script_dir":"ToMark", "compile_command":"pdflatex",
-        "merged suffix":"_marked.pdf"}'''
 g_config = mhsm.MarkingConfig("marking.cfg")
-
-'''
-MKH file format:
-#mkh is a json file dict indexed by
-#tag = filename prefix of marked files
-
-values=[filenames,hash,questions,final_valid, [output_hash,qs_valid]]
-
-#filenames is the list of file paths corresponding to the tag
-#hash is a hash value of those files at the time they were deemed marked
-#questions={'question':'mark'} for questions asserted as marked
-#final_valid is set true when source file passed a final validation check
-    last time it was marked
-output_hash= '' or a hash of the output (pdf) when both source and output
-    validation have succeeded
-qs_valid= {question_name: mark} (as in questions) for all questions checked
-when output_hash set
-'''
 
 ###############################################################################
 # Command line interface
@@ -56,226 +27,239 @@ when output_hash set
 # ************************************************************
 # Command handlers
 
+
 def cmd_exit(args):
+    '''
+    **CLI command:** Causes CLI loop to quit
+    '''
     return False
 
-'''def cmd_config(args):#user update config file
-    global config
-    config["editor"]=input("Editor application: ")
-    config["numsep"]=input("File number separator: ")#character in file names separating tag from document number
-    config["template"]=input("Template file: ")
-    config["marked suffix"]=input("Suffix for marked source files e.g.\'_m.tex\': ")
-    config["output suffix"]=input("Suffix for marked output files e.g.\'_m.pdf\': ")
-    config["merged suffix"]=input("Suffix for final merged output files e.g.\'_m.pdf\': ")
-    #config["output viewer"]=input("Viewer application: ")
-    config["script_dir"]=input("Script directory: ")
-    config["compile_command"]=input("Compile command (e.g. \'pdflatex\' to run  \'pdflatex <source file>\'): ")
-    try:
-        with open("MarkHelper.cfg","w") as config_file:
-            json.dump(config,config_file)
-    except Exception:
-        loghelper.print_and_log(logger,"Warning: Config not saved!")
-    return True'''
-def cmd_begin(args):#begin marking
-    # script_directory=config["script_dir"]
 
-    inp=input("Questions to mark (separated by spaces): ")
-    question_names=inp.split()
+def cmd_begin(args):
+    """
+    **CLI command:** Let user select some questions, then open each script
+    source file in turn for editing. Check user's progress on each script when
+    they close it
+    """
+    inp = input("Questions to mark (separated by spaces): ")
+    question_names = inp.split()
 
-    source_validate=input("Do final validation of source file? [y/n]: ") in ["y","Y"]
+    source_validate = input("Do final validation of source file? [y/n]: ") \
+        in ["y", "Y"]
 
-    quit_flag=False
+    quit_flag = False
     while not quit_flag:
         print("Checking marking state...")
         try:
             # initialize to_mark from given script directory
-            to_mark=mhsm.check_marking_state(g_config,question_names,
-                                        source_validate)[0]
+            to_mark = mhsm.check_marking_state(g_config, question_names,
+                                               source_validate)[0]
         except Exception:
             loghelper.print_and_log(logger,
                                     "Failed to update marking state!")
             return True
-        if to_mark=={}:
+        if to_mark == {}:
             print("Marking complete!")
             break
-        try:#precompile
+        try:  # precompile
             print("Precompiling...")
             mhem.pre_build(to_mark, g_config)
             print("Precompiling successful!")
         except Exception:
-            loghelper.print_and_log(logger,"Precompiling failed!")
+            loghelper.print_and_log(logger, "Precompiling failed!")
         for tag in to_mark:
-            print("Now marking "+tag)
-            quit_flag=not mhem.mark_one_loop(tag,to_mark,g_config,
-                                             question_names,
-                                             source_validate,False)
-            mhsm.declare_marked(tag,to_mark,g_config)#update marking state in file
-            if quit_flag: break
+            print("Now marking " + tag)
+            quit_flag = not mhem.mark_one_loop(tag, to_mark, g_config,
+                                               question_names,
+                                               source_validate, False)
+            # update marking state in file
+            mhsm.declare_marked(tag, to_mark, g_config)
+            if quit_flag:
+                break
     return True
 
 
-'''
-for iterable data print up to n entries
-'''
 def print_some(data, n=10):
-    en=list(enumerate(data))
+    '''
+    for iterable `data` print up to `n` entries
+    '''
+    en = list(enumerate(data))
 
-    for r in range(min(n,len(en))):
-        #print(en[r])#debug
+    for r in range(min(n, len(en))):
+        # print(en[r])#debug
         print("{}".format(en[r][1]))
-'''
-compile all marked scripts and open for the user to preview/edit allowing
-them to check/modify the output. record successful scripts as having output
-validated
 
 
-'''
 def cmd_build_n_check(args):
+    '''
+    **CLI command:**
+    Compile all marked scripts and open for the user to preview/edit, allowing
+    them to check/modify the output. Record scripts for which
+    this succeeds as having output validated
+    '''
 
-    inp=input("Questions required in completed scripts (separated by spaces): ")
-    question_names=inp.split()
+    inp = input("Questions required in completed scripts " +
+                "(separated by spaces): ")
+    question_names = inp.split()
 
     print("Checking marking state...")
     try:
-        #check for scripts with unmarked questions (from list) or which
-        #have not had the source validated
-        to_mark,done_mark=mhsm.check_marking_state(g_config,
-                                                   question_names,True,False)
-        if to_mark!={}:
+        # check for scripts with unmarked questions (from list) or which
+        # have not had the source validated
+        to_mark, done_mark = mhsm.check_marking_state(g_config,
+                                                      question_names,
+                                                      True, False)
+        if to_mark != {}:
             print("Some scripts missing marks or validation: ")
             print_some(to_mark)
             return True
-        #now all scripts validly marked
-        #get all of those that need user to check output
-        to_mark,done_mark=mhsm.check_marking_state(g_config,
-                                                   question_names,True,True)
+        # now all scripts validly marked
+        # get all of those that need user to check output
+        to_mark, done_mark = mhsm.check_marking_state(g_config,
+                                                      question_names,
+                                                      True, True)
     except Exception:
-        loghelper.print_and_log(logger,"Failed to update marking state!")
+        loghelper.print_and_log(logger, "Failed to update marking state!")
         return True
 
-    try:#compile
+    try:  # compile
         print("Compiling...")
         mhem.batch_compile(g_config.marking_dir(),
-                           [tag+g_config.marked_suffix() for tag in to_mark],
+                           [tag + g_config.marked_suffix() for tag in to_mark],
                            g_config.compile_command())
         print("Compiling successful!")
     except Exception:
-        loghelper.print_and_log(logger,"Compiling failed!")
+        loghelper.print_and_log(logger, "Compiling failed!")
         return True
     for tag in to_mark:
-        print("Now checking "+tag)
-        quit_flag=not mhem.mark_one_loop(tag,to_mark,g_config,question_names,
-                                    True,True)
-        mhsm.declare_marked(tag,to_mark,g_config)#update marking state in file
-        if quit_flag: break
+        print("Now checking " + tag)
+        quit_flag = not mhem.mark_one_loop(tag, to_mark, g_config,
+                                           question_names,
+                                           True, True)
+        # update marking state in file
+        mhsm.declare_marked(tag, to_mark, g_config)
+        if quit_flag:
+            break
     return True
 
-def cmd_makecsv(args):
 
-    out_path=os.path.join(g_config.script_dir(),
-                          input("CSV filename: "))
+def cmd_makecsv(args):
+    '''
+    **CLI command:** Prompt user for question names and try to extract marks
+    from each script mkh file for those questions. Store the results in a csv
+    file specified by the user (stored in the original script directory)
+    '''
+    out_path = os.path.join(g_config.script_dir(),
+                            input("CSV filename: "))
 
     try:
-        with open(out_path,'r'): pass
+        with open(out_path, 'r'):
+            pass
         if not input("File {} exists, overwrite? [y/n]: ".format(out_path))\
-           in ['y','Y']:
+           in ['y', 'Y']:
             print("Operation cancelled.")
             return True
-    except OSError: pass
+    except OSError:
+        pass
 
-    inp=input("Questions for which to extract marks (separated by spaces): ")
-    question_names=inp.split()
-
-    #final_validate=input("Require final validation of marking? [y/n]: ") in ["y","Y"]
+    inp = input("Questions for which to extract marks (separated by spaces): ")
+    question_names = inp.split()
 
     try:
         # initialize to_mark from given script directory
-        to_mark,done_mark=mhsm.check_marking_state(g_config,
-                                                    question_names,True,True)
+        to_mark, done_mark = mhsm.check_marking_state(g_config,
+                                                      question_names,
+                                                      True, True)
     except Exception:
-        loghelper.print_and_log(logger,"Failed to read marking state!")
+        loghelper.print_and_log(logger, "Failed to read marking state!")
         return True
 
-    if to_mark!={}:
-        print("Warning! Selected questions may not be validly marked in some scripts. Including: ")
+    if to_mark != {}:
+        print("Warning! Selected questions may not be validly marked in some" +
+              " scripts. Including: ")
         print_some(to_mark)
         print("Remember to run \'check\' command for final version.")
 
     try:
-        with open(out_path,'w') as file:
-            file.write("Script #")#header line
+        with open(out_path, 'w') as file:
+            file.write("Script #")  # header line
             for q in question_names:
                 file.write(", Question {}".format(q))
-            #body
+            # body
             for d in sorted(done_mark.keys()):
                 file.write("\n{}".format(d))
-                #print(done_mark[d])#debug
                 for q in question_names:
                     file.write(",{}".format(done_mark[d][4][1][q]))
     except Exception:
-        loghelper.print_and_log(logger,"Failed to write csv file.")
+        loghelper.print_and_log(logger, "Failed to write csv file.")
     return True
 
-'''
-Create blank pdf for each script and compile marked source files over the
-corresponding blank.
 
-Merge the output pdfs on top of copies of the original scripts
-'''
 def cmd_make_merged_output(args):
+    '''
+    **CLI command:** Create blank pdf for each script and compile marked
+    source files over the corresponding blank.
 
-    inp=input("Confirm questions required in completed scripts (separated by spaces): ")
-    question_names=inp.split()
+    Merge the output pdfs on top of copies of the original scripts to produce
+    'final merged output'
+    '''
+
+    inp = input("Confirm questions required in completed scripts " +
+                "(separated by spaces): ")
+    question_names = inp.split()
 
     print("Checking marking state...")
     try:
-        #check for scripts with unmarked questions (from list) or which
-        #have not had the source validated
-        to_mark,done_mark=mhsm.check_marking_state(g_config,
-                                                   question_names,True,True)
-        if to_mark!={}:
+        # check for scripts with unmarked questions (from list) or which
+        # have not had the source validated
+        to_mark, done_mark = mhsm.check_marking_state(g_config,
+                                                      question_names,
+                                                      True, True)
+        if to_mark != {}:
             print("Some scripts missing marks or validation: ")
             print_some(to_mark)
             print("Please ensure all marking completed before merging.")
     except Exception:
-        loghelper.print_and_log(logger,"Failed to update marking state!")
+        loghelper.print_and_log(logger, "Failed to update marking state!")
         return True
 
     '''
     Make blanks
     '''
-    blankdir=g_config.merged_dir()
-    newsourcedir=g_config.merged_sourcedir()
-    newfinaldir=g_config.final_dir()
-    for path in [blankdir,newsourcedir,newfinaldir]:
-        if not os.path.isdir(path):#create directory if necessary
+    blankdir = g_config.merged_dir()
+    newsourcedir = g_config.merged_sourcedir()
+    newfinaldir = g_config.final_dir()
+    for path in [blankdir, newsourcedir, newfinaldir]:
+        if not os.path.isdir(path):  # create directory if necessary
             os.mkdir(path)
     for d in done_mark:
         try:
-            for file in done_mark[d][0]:#constituent files
+            for file in done_mark[d][0]:  # constituent files
                 mhsm.make_blank_pdf_like(os.path.join(g_config.script_dir(),
                                                       file),
-                                         os.path.join(blankdir,file))
+                                         os.path.join(blankdir, file))
         except Exception:
-            loghelper.print_and_log(logger,"Warning! Failed to make blanks for {}".format(d))
+            loghelper.print_and_log(logger,
+                                    "Warning! Failed to make blanks for {}"
+                                    .format(d))
 
     '''
     copy source files
     '''
-    to_compile=[]
+    to_compile = []
     for d in done_mark:
         try:
-            new_source_path=g_config.tag_to_mergesource(d)
+            new_source_path = g_config.tag_to_mergesource(d)
             mhem.copyFile(g_config.tag_to_sourcepath(d), new_source_path)
             to_compile.append(new_source_path)
         except Exception:
-            loghelper.print_and_log(logger,"Warning! Failed to copy source "+
+            loghelper.print_and_log(logger, "Warning! Failed to copy source " +
                                     "file for {}".format(d))
 
     '''
     compile source files
     '''
-    mhem.batch_compile(newsourcedir,to_compile,g_config.compile_command())
+    mhem.batch_compile(newsourcedir, to_compile, g_config.compile_command())
 
     '''
     Merge files
@@ -297,32 +281,46 @@ def cmd_make_merged_output(args):
 # Main CLI cmd parser
 
 
-handlers = {"quit": cmd_exit, "config": g_config.cmd_config,
-            "begin": cmd_begin,
-            'makecsv': cmd_makecsv,
-            'check': cmd_build_n_check,
-            'makemerged': cmd_make_merged_output}  # define handlers
-def parse_cmd(cmd):
-    toks=cmd.split()
-    if len(toks)==0: return True#basic checks
+g_handlers = {"quit": cmd_exit, "config": g_config.cmd_config,
+              "begin": cmd_begin,
+              'makecsv': cmd_makecsv,
+              'check': cmd_build_n_check,
+              'makemerged': cmd_make_merged_output}  # define handlers
 
-    if toks[0] in handlers:
+
+def parse_cmd(cmd):
+    '''
+    Tokenize a string `cmd` and dispatch tokens [1:] to handler specified by
+    the first from g_handlers.
+
+    Returns
+    -------
+    True, or the value returned by the called handler
+    '''
+    toks = cmd.split()
+    if len(toks) == 0:
+        return True  # basic checks
+
+    if toks[0] in g_handlers:
         try:
-            return handlers[toks[0]](toks[1:])
+            return g_handlers[toks[0]](toks[1:])
         except Exception:
-            loghelper.print_and_log(logger,"Problem occured in {}".format(toks[0]))
+            loghelper.print_and_log(logger,
+                                    "Problem occured in {}".format(toks[0]))
             return True
     else:
         print("Unrecognized command!")
         return True
 
+
 # Initialization  #############################################################
-try:#load config
+try:  # load config
     g_config.load()
 except OSError:
     g_config.cmd_config(['all'])
 
 # Main CLI loop  ##############################################################
 while True:
-    cmd=input(">")
-    if not parse_cmd(cmd): break
+    cmd = input(">")
+    if not parse_cmd(cmd):
+        break

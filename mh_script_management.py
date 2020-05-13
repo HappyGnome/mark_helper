@@ -60,47 +60,122 @@ class MarkingConfig(config.Config):
                           prompt="Sub-directory used to prepare for merge: ")
         self.add_property("merge", "final directory", value="final",
                           prompt="Sub-directory where final output appears: ")
-        
+
     # handy access functions
     def numsep(self):
+        '''
+        Returns script/numsep property
+        '''
         return self._categories["script"]["numsep"]
+
     def script_suffix(self):
+        '''
+        Returns script/suffix property
+        '''
         return self._categories["script"]["suffix"]
+
     def script_dir(self):
+        '''
+        Returns script/directory property
+        '''
         return self._categories["script"]["directory"]
+
     def editor(self):
+        '''
+        Returns marking/editor property
+        '''
         return self._categories["marking"]["editor"]
+
     def template(self):
+        '''
+        Returns marking/template property
+        '''
         return self._categories["marking"]["template"]
+
     def marking_dir(self):
-        return os.path.join(self.script_dir(),self._categories["marking"]["directory"])
+        '''
+        Returns full path to marking directory (sub directory of script dir)
+        '''
+        return os.path.join(self.script_dir(),
+                            self._categories["marking"]["directory"])
+
     def marked_suffix(self):
+        '''
+        Returns marking/marked suffix property
+        '''
         return self._categories["marking"]["marked suffix"]
+
     def output_suffix(self):
+        '''
+        Returns marking/output suffix property
+        '''
         return self._categories["marking"]["output suffix"]
+
     def compile_command(self):
+        '''
+        Returns marking/compile command property
+        '''
         return self._categories["marking"]["compile command"]
+
     def merged_suffix(self):
+        '''
+        Returns merge/merged suffix property
+        '''
         return self._categories["merge"]["merged suffix"]
+
     def merged_dir(self):
-        return os.path.join(self.script_dir(), 
+        '''
+        Returns full path to merging directory (sub directory of script dir)
+        '''
+        return os.path.join(self.script_dir(),
                             self._categories["merge"]["merge directory"])
+
     def merged_sourcedir(self):
-        return os.path.join(self.merged_dir(),"source")    
+        '''
+        Returns full path to directory for source files
+        when merging (sub directory of merging dir)
+        '''
+        return os.path.join(self.merged_dir(), "source")
+
     def final_dir(self):
-        return self._categories["merge"]["final directory"]
-    
-    def tag_to_sourcepath(self,tag):
-        return os.path.join(self.marking_dir(),tag+self.marked_suffix())
-    def tag_to_outputpath(self,tag):
-        return os.path.join(self.marking_dir(),tag+self.output_suffix())
-    def tag_to_mergesource(self,tag):
+        '''
+        Returns full path to final merge output
+        directory (sub directory of script dir)
+        '''
+        return os.path.join(self.script_dir(),
+                            self._categories["merge"]["final directory"])
+
+    def tag_to_sourcepath(self, tag):
+        '''
+        Given `tag` return full path to associated source file
+        '''
+        return os.path.join(self.marking_dir(), tag+self.marked_suffix())
+
+    def tag_to_outputpath(self, tag):
+        '''
+        Given `tag` return full path to associated output file
+        '''
+        return os.path.join(self.marking_dir(), tag+self.output_suffix())
+
+    def tag_to_mergesource(self, tag):
+        '''
+        Given `tag` return full path to associated source file in merge folder
+        '''
         return os.path.join(self.merged_sourcedir(),
                             tag+self.marked_suffix())
-    def tag_to_mergeoutput(self,tag):
+
+    def tag_to_mergeoutput(self, tag):
+        '''
+        Given `tag` return full path to associated compiled output in merge
+        folder
+        '''
         return os.path.join(self.merged_dir(),
                             tag+self.output_suffix())
-    def tag_to_mergefinal(self,tag):
+
+    def tag_to_mergefinal(self, tag):
+        '''
+        Given `tag` return full path to associated final merged output file
+        '''
         return os.path.join(self.final_dir(), tag+self.merged_suffix())
 
 
@@ -121,7 +196,7 @@ def get_script_list(cfg):
 
     script_files_raw = os.listdir(cfg.script_dir())
     suffix = cfg.script_suffix()
-    
+
     # extract only pdfs and strip '.pdf'
     script_files_pdf = [f[:-len(suffix)] for f in script_files_raw
                         if f.endswith(suffix)]
@@ -316,7 +391,7 @@ def count_pdf_pages(file_paths):
     return pages
 
 
-def declare_marked(tag,to_mark,cfg):
+def declare_marked(tag, to_mark, cfg):
     '''
     To be called when marking state of script with given tag deemed to have
     changed. Create/update associated mkh file
@@ -329,6 +404,35 @@ def declare_marked(tag,to_mark,cfg):
 
     to_mark : dictionary of mkh entry data for current doc list
     (tag is a key for this)
+
+
+    MKH file format
+    ===============
+    *.mkh is a json file containing a dict
+
+    keys :
+        `tag` = filename prefix of marked files
+
+    values:
+        [`filenames`,`hash`,`questions`,`final_valid`,
+         [`output_hash`,`qs_valid`]] where:
+
+            `filenames` : list of file paths corresponding to the tag
+
+            `hash` : hash value of those files at the time they were
+            deemed marked
+
+            `questions` : {'question':'mark'} for `question`s
+            asserted as marked. `mark` is the recorded mark
+
+            `final_valid` : True when source file passed a final validation
+            check last time it was marked
+
+            `output_hash` : '' or a hash of the output (pdf) when both source
+            and output validation have succeeded
+
+            `qs_valid` : {`question_name`: `mark`} (as in questions)
+            for all questions checked when `output_hash` last set
     '''
     with open(os.path.join(cfg.script_dir(),
                            tag+".mkh"), "w") as mkh:

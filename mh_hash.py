@@ -9,7 +9,6 @@ import os
 import hashlib
 
 
-
 def hash_file_list(files, directory=''):
     '''
     read each file in the list `files` contained in `directory` and return
@@ -19,21 +18,21 @@ def hash_file_list(files, directory=''):
     -------
     hex digest of the hashed files
     '''
-    buf_size=2048#bytes
-    the_hash=hashlib.sha256()
-    #print(files)#debug
+    buf_size = 2048  # bytes
+    the_hash = hashlib.sha256()
+    # print(files)#debug
     for f in files:
-        with open(os.path.join(directory,f),"rb") as the_file:
-            while True:#until eof
-                chunk=the_file.read(buf_size)
-                if len(chunk)==0: break
+        with open(os.path.join(directory, f), "rb") as the_file:
+            while True:  # until eof
+                chunk = the_file.read(buf_size)
+                if len(chunk) == 0:
+                    break
                 the_hash.update(chunk)
     return the_hash.hexdigest()
 
 
-'''
 ###############################################################################
-'''
-if __name__=='__main__':
-    #print(hash_file_list(["HashTest/f1.txt","HashTest/f2.txt","HashTest/f3.txt"]))
+if __name__ == '__main__':
+    # print(hash_file_list(["HashTest/f1.txt","HashTest/f2.txt",
+    # "HashTest/f3.txt"]))
     pass

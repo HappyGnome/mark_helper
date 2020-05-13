@@ -13,8 +13,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# pylint: disable=anomalous-backslash-in-string
-# lots of comments about escape sequences in this file
 
 def nextToken(string):
     """
@@ -172,8 +170,9 @@ def interpret(toks, n, lines, cur_line, out_lines, variables):
         else:  # assume other and try substitution
             try:
                 val = variables[tok[0]]
-            except IndexError: pass
-        if not val == None:
+            except IndexError:
+                pass
+        if val is not None:
             ret.append(val)
     return ret
 
@@ -186,7 +185,7 @@ def cmd_echo_thisline(toks,
     '''
     command to add current line to output and return no token
 
-    \k
+    <backslash>k
     '''
 
     out_lines.append(lines[cur_line][:])
@@ -197,18 +196,19 @@ def cmd_delnxtline(toks,
                    lines, cur_line, out_lines, variables):
     '''
     command remove next line from input and returns no token
-    \skip
+    <backslash>skip
     '''
     try:
         lines.pop(cur_line+1)
-    except IndexError:pass
+    except IndexError:
+        pass
     return None  # interpret(toks, 1, lines, cur_line, out_lines, variables)[0]
 
 
 def cmd_echo(toks, lines, cur_line, out_lines, variables):
     '''
     command to add line to output and return no token
-    \echo <text>
+    <backslash>echo <text>
     '''
     text = interpret(toks, 1,
                      lines, cur_line, out_lines, variables)[0]+"\n"
@@ -220,11 +220,11 @@ def cmd_echo(toks, lines, cur_line, out_lines, variables):
 def cmd_concat(toks, lines, cur_line, out_lines, variables):
     '''
     command to concatenate two tokens
-    \+ <str1> <str2>
+    <backslash>+ <str1> <str2>
     '''
     try:
         vals = interpret(toks, 2,
-                       lines, cur_line, out_lines, variables)
+                         lines, cur_line, out_lines, variables)
         return vals[0]+vals[1]
     except ParseError:
         raise
@@ -235,11 +235,11 @@ def cmd_concat(toks, lines, cur_line, out_lines, variables):
 def cmd_addf(toks, lines, cur_line, out_lines, variables):
     '''
     command to interpret next two tokens as float numbers and add them
-    \+f <str1> <str2>
+    <backslash>+f <str1> <str2>
     '''
     try:
         vals = interpret(toks, 2,
-                       lines, cur_line, out_lines, variables)
+                         lines, cur_line, out_lines, variables)
         return str(float(vals[0])+float(vals[1]))
     except ParseError:
         raise
@@ -250,11 +250,11 @@ def cmd_addf(toks, lines, cur_line, out_lines, variables):
 def cmd_addd(toks, lines, cur_line, out_lines, variables):
     '''
     command to interpret next two tokens as int numbers and add them
-    \+d <str1> <str2>
+    <backslash>+d <str1> <str2>
     '''
     try:
         vals = interpret(toks, 2,
-                       lines, cur_line, out_lines, variables)
+                         lines, cur_line, out_lines, variables)
         return str(int(vals[0])+int(vals[1]))
     except ParseError:
         raise
@@ -269,7 +269,7 @@ def cmd_and(toks, lines, cur_line, out_lines, variables):
     '''
     try:
         vals = interpret(toks, 2,
-                       lines, cur_line, out_lines, variables)
+                         lines, cur_line, out_lines, variables)
         return str(int(vals[0] == '1' and vals[1] == '1'))
     except ParseError:
         raise
@@ -284,8 +284,8 @@ def cmd_not(toks, lines, cur_line, out_lines, variables):
     '''
     try:
         vals = interpret(toks, 1,
-                       lines, cur_line, out_lines, variables)
-        return str(int(not vals[0] == '1' ))
+                         lines, cur_line, out_lines, variables)
+        return str(int(not vals[0] == '1'))
     except ParseError:
         raise
     except Exception:
@@ -299,7 +299,7 @@ def cmd_or(toks, lines, cur_line, out_lines, variables):
     '''
     try:
         vals = interpret(toks, 2,
-                       lines, cur_line, out_lines, variables)
+                         lines, cur_line, out_lines, variables)
         return str(int(vals[0] == '1' or vals[1] == '1'))
     except ParseError:
         raise
@@ -313,7 +313,7 @@ def cmd_eqq(toks, lines, cur_line, out_lines, variables):
     '''
     try:
         vals = interpret(toks, 2,
-                           lines, cur_line, out_lines, variables)
+                         lines, cur_line, out_lines, variables)
         return str(int(vals[0] == vals[1]))
     except ParseError:
         raise
@@ -328,17 +328,18 @@ def cmd_assert_regex(toks, lines, cur_line, out_lines, variables):
     regex = ''
     try:
         regex = interpret(toks, 1,
-                           lines, cur_line, out_lines, variables)[0]
-        return str(int(len(re.findall(regex, lines[cur_line+1]))>0))
+                          lines, cur_line, out_lines, variables)[0]
+        return str(int(len(re.findall(regex, lines[cur_line+1])) > 0))
     except ParseError:
         raise
     except Exception:
-        raise ParseError("Invalid/missing regex or missing line below! Regex = {}".format(regex))
+        raise ParseError("Invalid/missing regex or missing line below!" +
+                         " Regex = {}".format(regex))
 
 
 def cmd_set_var(toks, lines, cur_line, out_lines, variables):
     '''
-    \setvar <key> <value>
+    <backslash>setvar <key> <value>
     Set or create new variable in the list and do not produce token
     '''
     try:
@@ -362,14 +363,15 @@ def cmd_the_out_line(toks, lines, cur_line, out_lines, variables):
 
 def cmd_echo_at(toks, lines, cur_line, out_lines, variables):
     '''
-    \echo_at <insert_pos> <string>
+    <backslash>echo_at <insert_pos> <string>
 
     Add <string> to output at line index <insert_pos>
     '''
     try:
         at, string = interpret(toks, 2, lines, cur_line, out_lines, variables)
         out_lines.insert(int(at), string+"\n")
-    except ParseError: raise
+    except ParseError:
+        raise
     except Exception:
         raise ParseError("Echo_at failed. Check line numbers are valid")
     return None
@@ -377,7 +379,7 @@ def cmd_echo_at(toks, lines, cur_line, out_lines, variables):
 
 def cmd_repeat(toks, lines, cur_line, out_lines, variables):
     '''
-    \r <num repeats> ...
+    <backslash>r <num repeats> ...
 
     tokens following <num repeats> wil be interpreted that number of times
     only those consumed by last repeat will be removed from toks
@@ -387,9 +389,10 @@ def cmd_repeat(toks, lines, cur_line, out_lines, variables):
     num = 0
     try:
         num = int(interpret(toks, 1, lines, cur_line, out_lines, variables)[0])
-    except ParseError: raise
+    except ParseError:
+        raise
     except Exception:
-        raise ParseError("Missing or invalid numerical argument for \r")
+        raise ParseError("Missing or invalid numerical argument for \\r")
     toks_bkp = toks
     for n in range(num):
         toks_bkp = toks[:]
@@ -401,8 +404,8 @@ def cmd_repeat(toks, lines, cur_line, out_lines, variables):
 def cmd_if(toks, lines, cur_line, out_lines, variables):
     '''
     Interpret next token, then attempt to interpret two more (or catch IfStops)
-    if first token  == '1' then first of the two results (incl changes to arguments)
-    is kept and otherwise the other
+    if first token  == '1' then first of the two results (incl changes to
+    arguments) is kept and otherwise the other
 
     if valid option returns a token, if returns that token
     '''
@@ -461,11 +464,23 @@ command_list = {'k': cmd_echo_thisline, 'skip': cmd_delnxtline,
                 'endif': cmd_endif,
                 '==': cmd_eqq}
 
-# process list of lines
-# any starting with '%#' will be tokenized and interpreted using variable list given
-# resulting output lines returned in a list
-        # lines is copied and not modified. values of variables may change
+
 def process_lines(lines, variables):
+    '''
+    Process list of lines any starting with '%#' will be tokenized and
+    interpreted using variable list given. Resulting output lines returned in
+    a list lines is copied and not modified. values of variables may change
+
+    Parameters
+    ----------
+    `lines` : list of strings to parse
+
+    `variables` : Dictionary of variables accessible to the parser
+    Returns
+    -------
+    ret : Output lines
+    '''
+
     # check for invalid variable names:
     for v in variables:
         assert_valid_varname(v)
@@ -502,9 +517,10 @@ def process_lines(lines, variables):
 
 def process_file(input_path, output_path, variables):
     '''
-    Read whole file at input path, process all lines using variables and writh to output_path
+    Read whole file at input path, process all lines using variables and
+    writh to output_path
 
-    IO errors may be raised!
+    OSError may be raised y IO methods
     '''
     ilines = []
     with open(input_path, 'r') as ifile:
@@ -513,6 +529,7 @@ def process_file(input_path, output_path, variables):
         ofile.writelines(process_lines(ilines, variables))
 
 ###############################################################################
+
 
 if __name__ == '__main__':
     '''print(process_markup_line("my line 1"))
@@ -539,11 +556,11 @@ if __name__ == '__main__':
         string = ret[2]
     '''
     '''
-    lines = ["", "line 1", "%#keep = \k -1 'keep\\n this'", " %#echo =
-             \echo 2 \+ 'hi' del 5",
-           "%#del = \skip echo !", "del0", "del1", "del2", "del3", "del4",
+    lines = ["", "line 1", "%#keep = \\k -1 'keep\\n this'", " %#echo =
+             \\echo 2 \\+ 'hi' del 5",
+           "%#del = \\skip echo !", "del0", "del1", "del2", "del3", "del4",
            "del5", "del6", "del7"
-           , "%#and = \&& and 1 f", "%#and = \echo 1 \!! and 0 f", "%#re =
+           , "%#and = \\&& and 1 f", "%#and = \\echo 1 \\!! and 0 f", "%#re =
            \\regex re",
            "\\usepackage[blahgrid, gridblah, grid, lo]{markpage}% grid"]
     #print(lines)
@@ -555,6 +572,6 @@ if __name__ == '__main__':
     with open('junk.txt', 'w') as file:
         file.writelines(["\n", "a\n", "\n", "\\b"])
     '''
-    var = {'_do':'0'}
+    var = {'_do': '0'}
     process_file('junk_in.txt', 'junk_out.txt', var)
     print(var)
