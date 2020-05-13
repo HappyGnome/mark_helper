@@ -169,7 +169,7 @@ class MarkingConfig(config.Config):
         Given `tag` return full path to associated compiled output in merge
         folder
         '''
-        return os.path.join(self.merged_dir(),
+        return os.path.join(self.merged_sourcedir(),
                             tag+self.output_suffix())
 
     def tag_to_mergefinal(self, tag):
@@ -408,35 +408,63 @@ def declare_marked(tag, to_mark, cfg):
 
     MKH file format
     ===============
-    *.mkh is a json file containing a dict
+    *.mkh is a json file containing a list
 
-    keys :
-        `tag` = filename prefix of marked files
 
-    values:
-        [`filenames`,`hash`,`questions`,`final_valid`,
-         [`output_hash`,`qs_valid`]] where:
+    [`filenames`,`hash`,`questions`,`final_valid`,
+     [`output_hash`,`qs_valid`]] where:
 
-            `filenames` : list of file paths corresponding to the tag
+        `filenames` : list of file paths corresponding to the tag
 
-            `hash` : hash value of those files at the time they were
-            deemed marked
+        `hash` : hash value of those files at the time they were
+        deemed marked
 
-            `questions` : {'question':'mark'} for `question`s
-            asserted as marked. `mark` is the recorded mark
+        `questions` : {'question':'mark'} for `question`s
+        asserted as marked. `mark` is the recorded mark
 
-            `final_valid` : True when source file passed a final validation
-            check last time it was marked
+        `final_valid` : True when source file passed a final validation
+        check last time it was marked
 
-            `output_hash` : '' or a hash of the output (pdf) when both source
-            and output validation have succeeded
+        `output_hash` : '' or a hash of the output (pdf) when both source
+        and output validation have succeeded
 
-            `qs_valid` : {`question_name`: `mark`} (as in questions)
-            for all questions checked when `output_hash` last set
+        `qs_valid` : {`question_name`: `mark`} (as in questions)
+        for all questions checked when `output_hash` last set
     '''
     with open(os.path.join(cfg.script_dir(),
                            tag+".mkh"), "w") as mkh:
         json.dump(to_mark[tag], mkh)
+
+
+def reset_validation(tag, cfg):
+    '''
+    Look for mkh file associated to `tag` and reset validation elements
+
+    Parameters
+    ----------
+
+    `tag` : prefix of mkh file to look for
+
+    `cfg` : config of marking job (specifies directory to check)
+
+    Raises
+    ------
+    OSError if mkh file not found
+
+    TypeError or ValueError if JSON fails
+
+    ValueError if data format invalid
+    '''
+    filepath = os.path.join(cfg.script_dir(), tag+".mkh")
+    mkh_data = None
+    with open(filepath, 'r') as file:
+        mkh_data = json.load(file)
+    try:
+        mkh_data[3:] = [False, ['', {}]]
+    except (IndexError, KeyError):
+        raise ValueError("Invalid mkh data for {}!".format(tag))
+    with open(filepath, 'w') as file:
+        json.dump(mkh_data, file)
 
 
 def make_blank_pdf_like(in_path, out_path):

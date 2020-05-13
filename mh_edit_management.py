@@ -260,7 +260,7 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
                     print("Warning: page count in {} doesn't match input."
                           .format(cfg.tag_to_outputpath(tag)))
                 output_hash = mh_hash.hash_file_list([tag+cfg.output_suffix()],
-                                                     cfg.source_dir())
+                                                     cfg.marking_dir())
         if final_validate_source:
             try:
                 ret[1] = ret[1] \
@@ -326,14 +326,14 @@ def batch_check_exist(directory, files):
     '''
     for file in files:
         try:
-            with open(os.path.join(directory, file)):
+            with open(os.path.join(directory, file), 'r'):
                 pass
         except Exception:
             print("Compiled file {} not available!".format(file))
             raise
 
 
-def batch_compile_and_check(directory, tags, cfg):
+def batch_compile_and_check(directory, tags, cfg, comp_if_output_exists=True):
     """
     Run a batch compile and batch check
 
@@ -345,6 +345,9 @@ def batch_compile_and_check(directory, tags, cfg):
     tags : iterable yielding prefixes of source files/output files
 
     cfg : MarkingConfig - used to add source and output suffixes to the tags
+    
+    comp_if_output_exists : if True (default) try to compile all source files
+        otherwise check which already exist and ignore those.
 
     Returns
     -------
@@ -355,6 +358,15 @@ def batch_compile_and_check(directory, tags, cfg):
     May raise e.g. OSError on failed check or other exceptions from batch
     compilation
     """
+    if not comp_if_output_exists:
+        newtags = []
+        for tag in tags:
+            try:
+                with open(cfg.tag_to_outputpath(tag), 'r'):
+                    pass
+            except Exception:
+                newtags.append(tag)
+        tags=newtags
     source_filelist = [tag + cfg.marked_suffix() for tag in tags]
     output_filelist = [tag + cfg.output_suffix() for tag in tags]
     batch_compile(directory, source_filelist, cfg.compile_command())
@@ -365,7 +377,7 @@ def pre_build(to_mark, cfg):
     '''
     Create tex files for marking all scripts in to_mark
 
-    Run compiler on new source files using batch_compile
+    Run compiler on all source files using batch_compile
 
     Parameters
     ----------
@@ -375,7 +387,6 @@ def pre_build(to_mark, cfg):
     '''
     if not os.path.isdir(cfg.marking_dir()):  # create directory if necessary
         os.mkdir(cfg.marking_dir())
-    to_compile = []
     for tag in to_mark:
         # file to create/edit
         filepath = cfg.tag_to_sourcepath(tag)
@@ -389,16 +400,15 @@ def pre_build(to_mark, cfg):
                                    ([os.path.join(cfg.script_dir(), p)
                                      for p in to_mark[tag][0]]),
                                    cfg.template())
-                to_compile.append(tag)
             except Exception:
                 loghelper.print_and_log(logger,
                                         "Failed to create new file at: {}"
                                         .format(filepath))
-    batch_compile_and_check(cfg.marking_dir(), to_compile, cfg)
+    batch_compile_and_check(cfg.marking_dir(), to_mark, cfg, False)
 
 
 def mark_one_loop(tag, to_mark, cfg, question_names=None,
-                  source_validate=False, output_validate=False):
+                  source_validate=False, output_validate=False):#TODO make output validation fail if modified
     '''
     Perform loop to mark one script (or until user quits/skips file)
     Try to mark script `tag` in `to_mark`

@@ -91,7 +91,7 @@ def print_some(data, n=10):
         print("{}".format(en[r][1]))
 
 
-def cmd_build_n_check(args):
+def cmd_build_n_check(args):#TODO detect changes and rebuild-check etc
     '''
     **CLI command:**
     Compile all marked scripts and open for the user to preview/edit, allowing
@@ -141,6 +141,30 @@ def cmd_build_n_check(args):
             break
     return True
 
+
+def cmd_reset_validation(args):
+    '''
+    **CLI command:** Reset validation for particular file, or all files.
+    Use argument \'all\' to reset all validation
+    '''
+
+    tags = []  # tags to reset
+    if 'all' in args and input("Are you sure you would like to " +
+                               "reset validation checks in ALL scripts?" +
+                               " [y/n]: ") in ['y', 'Y']:
+        tags = mhsm.get_script_list(g_config).keys()
+    else:
+        tags = [input("Enter script prefix (e.g. \'tag\' if \'tag.mkh\' " +
+                      "needs resetting): ")]
+    for tag in tags:
+        try:
+            mhsm.reset_validation(tag, g_config)
+        except Exception:
+            loghelper.print_and_log(logger, "Warning! Failed to reset " +
+                                    "validation for {}".format(tag))
+    return True
+
+#TODO: make check loop until all files pass validation
 
 def cmd_makecsv(args):
     '''
@@ -225,6 +249,7 @@ def cmd_make_merged_output(args):
     '''
     Make blanks
     '''
+    print("Making blanks...")
     blankdir = g_config.merged_dir()
     newsourcedir = g_config.merged_sourcedir()
     newfinaldir = g_config.final_dir()
@@ -245,6 +270,7 @@ def cmd_make_merged_output(args):
     '''
     copy source files
     '''
+    print("Copying source files...")
     to_compile = []
     for d in done_mark:
         try:
@@ -258,11 +284,13 @@ def cmd_make_merged_output(args):
     '''
     compile source files
     '''
+    print("Compiling...")
     mhem.batch_compile_and_check(newsourcedir, to_compile, g_config)
 
     '''
     Merge files
     '''
+    print("Merging...")
     for d in done_mark:
         try:
             mhsm.merge_pdfs(done_mark[d][0], g_config.tag_to_mergeoutput(d),
@@ -272,6 +300,7 @@ def cmd_make_merged_output(args):
             loghelper.print_and_log(logger,
                                     "Warning! Failed to merge output for {}"
                                     .format(d))
+    print("Merge complete.")
     return True
 
 
@@ -284,7 +313,8 @@ g_handlers = {"quit": cmd_exit, "config": g_config.cmd_config,
               "begin": cmd_begin,
               'makecsv': cmd_makecsv,
               'check': cmd_build_n_check,
-              'makemerged': cmd_make_merged_output}  # define handlers
+              'makemerged': cmd_make_merged_output,
+              'invalidate': cmd_reset_validation}  # define handlers
 
 
 def parse_cmd(cmd):
