@@ -10,7 +10,6 @@ import os
 import json
 import logging
 
-import numpy as np
 
 import PyPDF2 as ppdf
 
@@ -459,8 +458,8 @@ def make_blank_pdf_like(in_path, out_path):
     writer = ppdf.PdfFileWriter()
     for i in range(reader.getNumPages()):
         dims = reader.getPage(i).mediaBox
-        writer.addBlankPage(np.abs(dims.lowerRight[0]-dims.lowerLeft[0]),
-                            np.abs(dims.upperRight[1]-dims.lowerRight[1]))
+        writer.addBlankPage(abs(dims.lowerRight[0]-dims.lowerLeft[0]),
+                            abs(dims.upperRight[1]-dims.lowerRight[1]))
 
     with open(out_path, "wb") as file:
         writer.write(file)
