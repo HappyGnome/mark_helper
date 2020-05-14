@@ -203,10 +203,11 @@ def cmd_makecsv(args):
         return True
 
     if to_mark != {}:
-        print("Warning! Selected questions may not be validly marked in some" +
+        print("Selected questions may not be validly marked in some" +
               " scripts. Including: ")
         print_some(to_mark)
         print("Remember to run \'check\' command for final version.")
+        return True
 
     try:
         with open(out_path, 'w') as file:
@@ -247,6 +248,7 @@ def cmd_make_merged_output(args):
             print("Some scripts missing marks or validation: ")
             print_some(to_mark)
             print("Please ensure all marking completed before merging.")
+            return True
     except Exception:
         loghelper.print_and_log(logger, "Failed to update marking state!")
         return True
