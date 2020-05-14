@@ -170,7 +170,7 @@ def interpret(toks, n, lines, cur_line, out_lines, variables):
         else:  # assume other and try substitution
             try:
                 val = variables[tok[0]]
-            except IndexError:
+            except KeyError:
                 pass
         if val is not None:
             ret.append(val)
@@ -465,7 +465,7 @@ command_list = {'k': cmd_echo_thisline, 'skip': cmd_delnxtline,
                 '==': cmd_eqq}
 
 
-def process_lines(lines, variables):
+def process_lines(lines, variables, comment_start='%#'):
     '''
     Process list of lines any starting with '%#' will be tokenized and
     interpreted using variable list given. Resulting output lines returned in
@@ -477,6 +477,9 @@ def process_lines(lines, variables):
 
     `variables` : Dictionary of variables accessible to the parser
     Returns
+
+    `comment_start` : at the beginning of a line which indicates it should be
+    parsed
     -------
     ret : Output lines
     '''
@@ -491,23 +494,24 @@ def process_lines(lines, variables):
     while cur_line < len(lines):  # lines may change
         parsed = False
         line = lines[cur_line]
-        try:
-            if line.strip()[:2] == "%#":
-                var_start = eq_at = line.find('#')+1
-                eq_at = line.find('=')
-                if eq_at >= 0:
-                    varname = line[var_start:eq_at]
+
+        if line.strip()[:len(comment_start)] == comment_start:
+            # strip comment string from line
+            line = line[line.find(comment_start)+len(comment_start):]
+            eq_at = line.find('=')
+            if eq_at >= 0:
+                try:
+                    varname = line[:eq_at]
                     if varname in variables:
                         toks = makeTokens(line[eq_at+1:])
                         variables[varname] = interpret(toks, 1, lines,
                                                        cur_line, ret,
                                                        variables)[0]
                         parsed = True
-        except Exception as e:
-            print("Failed to parse the following line:")
-            print(line)
-            print("Details: {}".format(e))
-            parsed = False
+                except Exception as e:
+                    print("Failed to parse the following line:")
+                    print(line)
+                    print("Details: {}\n".format(e))
 
         if not parsed:
             ret.append(line)
@@ -515,7 +519,7 @@ def process_lines(lines, variables):
     return ret
 
 
-def process_file(input_path, output_path, variables):
+def process_file(input_path, output_path, variables, comment_start="%#"):
     '''
     Read whole file at input path, process all lines using variables and
     writh to output_path
@@ -526,7 +530,7 @@ def process_file(input_path, output_path, variables):
     with open(input_path, 'r') as ifile:
         ilines = ifile.readlines()
     with open(output_path, 'w') as ofile:
-        ofile.writelines(process_lines(ilines, variables))
+        ofile.writelines(process_lines(ilines, variables, comment_start))
 
 ###############################################################################
 
@@ -573,5 +577,5 @@ if __name__ == '__main__':
         file.writelines(["\n", "a\n", "\n", "\\b"])
     '''
     var = {'_do': '0'}
-    process_file('junk_in.txt', 'junk_out.txt', var)
+    process_file('junk_in.txt', 'junk_out.txt', var,'$$$')
     print(var)

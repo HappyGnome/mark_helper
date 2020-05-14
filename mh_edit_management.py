@@ -21,7 +21,7 @@ import mh_script_management as mhsm
 logger = logging.getLogger(__name__)
 
 
-def make_from_template(file_path, script_base_path, page_count, template_path):
+def make_from_template(file_path, script_base_path, page_count, cfg):
     '''
     Using mh_parsing generate a new source file from template
 
@@ -33,22 +33,26 @@ def make_from_template(file_path, script_base_path, page_count, template_path):
     the script path relative to the new source file. e.g. for a script residing
     in "myscript_1.pdf, myscript_2.pdf", this parameter should be "../myscript"
 
+    `page_count` : number of pages in script across all files
+
+    `cfg` : MarkingConfig (specifies parse line delimiter and template)
+
     Variables passed to parser:
         "_in_path" - prefix of path(s) of document(s) to mark,
         "_#pages" - number of pages in document
         "_init" - flag indicating initial file construction
     '''
     try:
-        mhp.process_file(template_path, file_path,
+        mhp.process_file(cfg.template(), file_path,
                          {"_in_path": script_base_path,
                           "_#pages": str(page_count),
-                          "_init": "1"})
+                          "_init": "1"}, cfg.source_escape())
     except mhp.ParseError as e:
         print(e)
         raise
 
 
-def reset_file_final_check(path):
+def reset_file_final_check(path, cfg):
     '''
     Open file at `path`, process with mhu and save back to same path
 
@@ -57,13 +61,14 @@ def reset_file_final_check(path):
         for final assert
     '''
     try:
-        mhp.process_file(path, path, {"_final_assert_reset": "1"})
+        mhp.process_file(path, path, {"_final_assert_reset": "1"},
+                         cfg.source_escape())
     except mhp.ParseError as e:
         print(e)
         raise
 
 
-def do_file_final_check(path):
+def do_file_final_check(path, cfg):
     '''
     Open file at `path`, process with mhu and save back to same path
 
@@ -77,14 +82,14 @@ def do_file_final_check(path):
     '''
     var = {"_final_assert": "0"}
     try:
-        mhp.process_file(path, path, var)
+        mhp.process_file(path, path, var, cfg.source_escape())
         return var["_final_assert"] == "1"
     except mhp.ParseError as e:
         print(e)
         raise
 
 
-def reset_file_q(path, question_name, previous_mark=''):
+def reset_file_q(path, question_name, cfg, previous_mark=''):
     '''
     Open file at `path`, process with mhu and save back to same path
 
@@ -97,13 +102,14 @@ def reset_file_q(path, question_name, previous_mark=''):
     try:
         mhp.process_file(path, path, {"_question_reset": "1",
                                       "_question_name": question_name,
-                                      "_question_prevmark": previous_mark})
+                                      "_question_prevmark": previous_mark},
+                         cfg.source_escape())
     except mhp.ParseError as e:
         print(e)
         raise
 
 
-def do_file_q_check(path, question_name):
+def do_file_q_check(path, question_name, cfg):
     '''
     Open file at `path`, process with mhu and save back to same path
     Attempt to extract mark for named question
@@ -128,7 +134,7 @@ def do_file_q_check(path, question_name):
     var = {"_question_mark": "", "_question_assert": "0",
            "_question_name": question_name}
     try:
-        mhp.process_file(path, path, var)
+        mhp.process_file(path, path, var, cfg.source_escape())
         marked = var["_question_assert"] == "1" and var["_question_mark"]
         return [marked, var["_question_mark"]]
     except mhp.ParseError as e:
@@ -199,7 +205,7 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
                                mhsm.count_pdf_pages(
                                 [os.path.join(cfg.script_dir(), p)
                                  for p in to_mark[tag][0]]),
-                               cfg.template())
+                               cfg)
         except Exception:
             loghelper.print_and_log(logger,
                                     "Failed to create new file at: {}"
@@ -209,14 +215,14 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
     for q in questions:
         try:
             reset_file_q(sourcefile,
-                         q, to_mark[tag][2].get(q, ''))
+                         q, cfg, to_mark[tag][2].get(q, ''))
         except Exception:
             loghelper.print_and_log(logger,
                                     "Failed to reset question {} in {}"
                                     .format(q, sourcefile))
     if final_validate_source:
         try:
-            reset_file_final_check(sourcefile)
+            reset_file_final_check(sourcefile, cfg)
         except Exception:
             loghelper.print_and_log(logger,
                                     "Failed to reset master assert in {}"
@@ -272,7 +278,7 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
         if final_validate_source:
             try:
                 ret[1] = ret[1] \
-                    and do_file_final_check(sourcefile)
+                    and do_file_final_check(sourcefile, cfg)
             except Exception:
                 loghelper.print_and_log(logger,
                                         "Failed to perform final source" +
@@ -282,7 +288,7 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
         # inspect selected variables
         for q in questions:
             try:
-                marked, score = do_file_q_check(sourcefile, q)
+                marked, score = do_file_q_check(sourcefile, q, cfg)
                 if marked:
                     ret[0][q] = score
                 else:
@@ -407,7 +413,7 @@ def pre_build(to_mark, cfg):
                                    mhsm.count_pdf_pages
                                    ([os.path.join(cfg.script_dir(), p)
                                      for p in to_mark[tag][0]]),
-                                   cfg.template())
+                                   cfg)
             except Exception:
                 loghelper.print_and_log(logger,
                                         "Failed to create new file at: {}"

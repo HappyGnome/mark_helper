@@ -10,7 +10,6 @@ import os
 import json
 import logging
 
-
 import PyPDF2 as ppdf
 
 import mh_hash
@@ -50,7 +49,10 @@ class MarkingConfig(config.Config):
                           "\'_m.pdf\': ")
         self.add_property("marking", "compile command", value="pdflatex",
                           prompt="Compile command (e.g. \'pdflatex\' to" +
-                          " run \'pdflatex <source file>\'):")
+                          " run \'pdflatex <source file>\'): ")
+        self.add_property("marking", "source escape", value="%#",
+                          prompt="Escape string to start active comment" +
+                          " lines in template/source files e.g. \'%#\': ")
         self.add_category("merge")
         self.add_property("merge", "merged suffix", value="_m.pdf",
                           prompt="Suffix for final merged output files e.g." +
@@ -115,6 +117,13 @@ class MarkingConfig(config.Config):
         Returns marking/compile command property
         '''
         return self._categories["marking"]["compile command"]
+    
+    def source_escape(self):
+        '''
+        Returns escape string used to start \'active comment\' lines in source 
+        files
+        '''
+        return self._categories["marking"]["source escape"]
 
     def merged_suffix(self):
         '''
