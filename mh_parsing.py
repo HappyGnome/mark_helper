@@ -119,7 +119,7 @@ class IfStop(Exception):
     '''
 
     def __init__(self):
-        super().__init__("Unexpected endif!")
+        super().__init__("Unexpected \\end!")
 
 
 def interpret(toks, n, lines, cur_line, out_lines, variables):
@@ -150,12 +150,12 @@ def interpret(toks, n, lines, cur_line, out_lines, variables):
 
     Returns
     -------
-    up to `n` literals, but may be fewer if `line` ends beforehand
+    up to `n` strings, but may be fewer if `line` ends beforehand
 
     '''
     ret = []
     while len(ret) < n:
-        val = ''
+        val = None
         try:
             tok = toks.pop(0)
             val = tok[0]
@@ -173,7 +173,8 @@ def interpret(toks, n, lines, cur_line, out_lines, variables):
             except KeyError:
                 pass
         if val is not None:
-            ret.append(val)
+            # double check it's a string
+            ret.append(str(val))
     return ret
 
 ###############################################################################
@@ -381,7 +382,7 @@ def cmd_repeat(toks, lines, cur_line, out_lines, variables):
     '''
     <backslash>r <num repeats> ...
 
-    tokens following <num repeats> wil be interpreted that number of times
+    tokens following <num repeats> will be interpreted that number of times
     only those consumed by last repeat will be removed from toks
 
     returns from interpreting the 'repeated' tokens are ignored
@@ -396,7 +397,10 @@ def cmd_repeat(toks, lines, cur_line, out_lines, variables):
     toks_bkp = toks
     for n in range(num):
         toks_bkp = toks[:]
-        interpret(toks_bkp, 1, lines, cur_line, out_lines, variables)
+        try:
+            interpret(toks_bkp, 1, lines, cur_line, out_lines, variables)
+        except IfStop:
+            pass
     toks[:] = toks_bkp
     return None
 
@@ -404,15 +408,15 @@ def cmd_repeat(toks, lines, cur_line, out_lines, variables):
 def cmd_if(toks, lines, cur_line, out_lines, variables):
     '''
     Interpret next token, then attempt to interpret two more (or catch IfStops)
-    if first token  == '1' then first of the two results (incl changes to
+    If first token  == '1' then first of the two results (incl changes to
     arguments) is kept and otherwise the other
 
-    if valid option returns a token, if returns that token
+    if valid option returns a token, `\\ if` returns that token, otherwise None
     '''
     # true or false value
     tf = interpret(toks, 1, lines, cur_line, out_lines, variables)[0]
     # evaluate two tokens/catch IfStops instead
-    ret = ''
+    ret = None
 
     # dummy variables for wrong branch
     lines_dmy = lines[:]
@@ -461,7 +465,7 @@ command_list = {'k': cmd_echo_thisline, 'skip': cmd_delnxtline,
                 '+f': cmd_addf, '+d': cmd_addd,
                 '#ol': cmd_the_out_line, 'echo@': cmd_echo_at,
                 'r': cmd_repeat, 'set': cmd_set_var, 'if': cmd_if,
-                'endif': cmd_endif,
+                'end': cmd_endif,
                 '==': cmd_eqq}
 
 
@@ -576,6 +580,6 @@ if __name__ == '__main__':
     with open('junk.txt', 'w') as file:
         file.writelines(["\n", "a\n", "\n", "\\b"])
     '''
-    var = {'_do': '0'}
-    process_file('junk_in.txt', 'junk_out.txt', var,'$$$')
+    var = {'_do': 0}
+    process_file('junk_in.txt', 'junk_out.txt', var)
     print(var)
