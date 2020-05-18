@@ -15,8 +15,11 @@ import loghelper
 import mh_script_management as mhsm
 import mh_edit_management as mhem
 
+
+logging.basicConfig(filename="Log.txt", format="{asctime}#################" +
+                    "##################################\n{message}",
+                    style="{")
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename="Log.txt")
 
 g_config = mhsm.MarkingConfig("marking.cfg")
 
@@ -361,3 +364,5 @@ while True:
     cmd = input(">")
     if not parse_cmd(cmd):
         break
+
+logging.shutdown()
