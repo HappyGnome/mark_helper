@@ -142,6 +142,41 @@ def do_file_q_check(path, question_name, cfg):
         raise
 
 
+def ready_source_file(filepath, tag, to_mark, cfg):
+    """
+    Check whether source file exists and create it from template if not
+
+    Parameters
+    ----------
+    filepath : Desired path for the file
+    tag : Key for the associated script data in to_mark
+    to_mark : Dict of script data for current marking task (MKH format)
+    cfg : MarkingConfig for current task (specifies template etc)
+
+    Returns
+    -------
+    None.
+
+    """
+    make_new = False
+    try:  # check file exists
+        with open(filepath, 'r'):
+            pass
+    except OSError:  # create new file
+        make_new = True
+    if make_new:
+        try:
+            make_from_template(filepath, '../'+tag,
+                               mhsm.count_pdf_pages
+                               ([os.path.join(cfg.script_dir(), p)
+                                 for p in to_mark[tag][0]]),
+                               cfg)
+        except Exception:
+            loghelper.print_and_log(logger,
+                                    "Failed to create new file at: {}"
+                                    .format(filepath))
+
+
 def make_user_mark(tag, to_mark, cfg, questions=None,
                    final_validate_source=True, final_validate_output=False):
     '''
@@ -195,21 +230,7 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
         os.mkdir(cfg.marking_dir())
 
     sourcefile = cfg.tag_to_sourcepath(tag)
-    edit_epoch = 0  # time after which unsaved edits cause validation failure
-    try:  # check file exists
-        with open(sourcefile, 'r'):
-            pass
-    except OSError:  # create new file
-        try:
-            make_from_template(sourcefile, '../'+tag,
-                               mhsm.count_pdf_pages(
-                                [os.path.join(cfg.script_dir(), p)
-                                 for p in to_mark[tag][0]]),
-                               cfg)
-        except Exception:
-            loghelper.print_and_log(logger,
-                                    "Failed to create new file at: {}"
-                                    .format(sourcefile))
+    ready_source_file(sourcefile, tag, to_mark, cfg)
 
     # reset all variables to inspect later
     for q in questions:
@@ -255,8 +276,6 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
         output_hash = ''
         if final_validate_output:
             # do this first or timestamps change
-            # ignore edits before edit_epoch (start of this method)
-            # if applicable
             new_edit_epoch = old_edit_epoch+1
             try:
                 new_edit_epoch =\
@@ -316,17 +335,18 @@ def batch_compile(directory, files, compile_command):
     try:
         here = os.getcwd()
         os.chdir(directory)
-        for s in files:  # compile examples
+        for i, s in enumerate(files):  # compile examples
             try:
+                print("\rCompiling: {}/{}. ".format(i+1, len(files)), end='\r')
                 # print(directory)#debug
-                # print([compile_command,s])#debug
-                sp.run([compile_command, s], check=True,
-                       capture_output=True)
+                # print([compile_command,s])
+                sp.run([compile_command, s], check=True)
 
             except sp.CalledProcessError:
                 # raise#debug
                 print("Compilation failed for {}. Continuing...".format(s))
     finally:
+        print('')  # newline to break from progress bar
         os.chdir(here)
 
 
@@ -404,20 +424,7 @@ def pre_build(to_mark, cfg):
     for tag in to_mark:
         # file to create/edit
         filepath = cfg.tag_to_sourcepath(tag)
-        try:  # check file exists
-            with open(filepath, 'r'):
-                pass
-        except OSError:  # create new file
-            try:
-                make_from_template(filepath, '../'+tag,
-                                   mhsm.count_pdf_pages
-                                   ([os.path.join(cfg.script_dir(), p)
-                                     for p in to_mark[tag][0]]),
-                                   cfg)
-            except Exception:
-                loghelper.print_and_log(logger,
-                                        "Failed to create new file at: {}"
-                                        .format(filepath))
+        ready_source_file(filepath, tag, to_mark, cfg)
     batch_compile_and_check(cfg.marking_dir(), to_mark, cfg, False)
 
 

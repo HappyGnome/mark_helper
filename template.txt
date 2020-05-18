@@ -2,17 +2,6 @@
 
 \usepackage{amsfonts,mathtools}
 
-%markpage shortcuts
-\newcommand{\mtt}[2]{\mnoth #1#2 {\LARGE\mtick}}
-\newcommand{\mcc}[2]{\mnoth #1#2 {\LARGE\mcross}}
-\def\mt#1 #2#3/{\mnoth #2#3{\LARGE\mtick \;\large#1}}
-\def\mc#1 #2#3/{\mnoth #2#3{\LARGE\mcross\; \large#1}} 
-\def\mq#1 #2 #3#4/{\mnoth[node opts={ultra thick, shape=circle, draw}]#3#4{\Large$\displaystyle\frac{#1}{#2}$}}
-%Usage e.g. \mtt ab %puts a large tick at column 'a', row 'b'
-% \mc 5 xy/ %puts a cross and non-circled '5'  at column 'x' row 'y' 
-% \mc good xy/ %puts a cross and non-circled 'good'  at column 'x' row 'y' 
-%\mq 6 10 xy/ %puts Large 6/10 circled at column 'x' row 'y' 
-
 %#_init=\echo \+ '%#_final_assert=\\k \\skip \\echo \'\\\\usepackage[source = ' \+ _in_path ',margin=0cm]{markpage}%use option flag "grid" to show grid\' \'1\' %DO NOT ALTER %keep \\usepackage...{markpage} on line below!' _init
 %#_init=\echo \+ '\\usepackage[source = ' \+ _in_path ',margin=0cm, grid]{markpage}%use option flag "grid" to show grid' _init
 
@@ -21,7 +10,7 @@
 \mpageDefaults{subgrid show=0}
 
 \begin{document}
-%#_init=\set 'loopPg' '1' \r _#pages \echo \+ '\\begin{mpage}%Page ' \+ loopPg '\n\n\\end{mpage}' \set 'loopPg' \+d loopPg '1' _init _init
+%#_init=\set 'loopPg' '1' \r _#pages \echo \+ '\\begin{mpage}%Page ' \+ \ftoi loopPg '\n\n\\end{mpage}' \set 'loopPg' \+f loopPg '1' _init _init
 
 \mstatus%check all pages found
 \end{document}
@@ -31,7 +20,7 @@
 %MarkHelper scripting. DO NOT ALTER
 
 %questions with no previous mark
-%#_question_reset=\k \if \== _question_prevmark '' \set '_question_prevmark' 'MK' \endif \endif _question_reset
+%#_question_reset=\k \if \== _question_prevmark '' \set '_question_prevmark' 'MK' \end \end _question_reset
 %Print lines for inputting question marks at bookmark point
 %#_question_reset=\k \echo@ qm_bkmk \+ '%#_question_mark=\\if \\== _question_name \'' \+ _question_name \+ '\'  \'' \+ _question_prevmark \+ '\' \\k _question_mark %Replace MK with mark for question '  _question_name _question_reset
 

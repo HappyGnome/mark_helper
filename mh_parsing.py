@@ -230,6 +230,7 @@ def cmd_concat(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Concatenation failed!")
 
 
@@ -245,22 +246,24 @@ def cmd_addf(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Addition failed!")
 
 
-def cmd_addd(toks, lines, cur_line, out_lines, variables):
+def cmd_ftoi(toks, lines, cur_line, out_lines, variables):
     '''
-    command to interpret next two tokens as int numbers and add them
-    <backslash>+d <str1> <str2>
+    command to format next token (floating point) as integer
+    <backslash>int <str1> <str2>
     '''
     try:
-        vals = interpret(toks, 2,
-                         lines, cur_line, out_lines, variables)
-        return str(int(vals[0])+int(vals[1]))
+        return str(int(float(interpret(toks, 1,
+                                       lines, cur_line, out_lines,
+                                       variables)[0])))
     except ParseError:
         raise
     except Exception:
-        raise ParseError("Addition failed!")
+        logger.exception("Parsing error")
+        raise ParseError("Integer conversion failed!")
 
 
 def cmd_and(toks, lines, cur_line, out_lines, variables):
@@ -275,6 +278,7 @@ def cmd_and(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Boolean \'and\' failed!")
 
 
@@ -290,6 +294,7 @@ def cmd_not(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Boolean \'not\' failed!")
 
 
@@ -305,6 +310,7 @@ def cmd_or(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Boolean \'or\' failed!")
 
 
@@ -319,6 +325,7 @@ def cmd_eqq(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("\'==\' failed!")
 
 
@@ -334,6 +341,7 @@ def cmd_assert_regex(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Invalid/missing regex or missing line below!" +
                          " Regex = {}".format(regex))
 
@@ -350,6 +358,7 @@ def cmd_set_var(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Could not set variable!")
 
     return None
@@ -374,6 +383,7 @@ def cmd_echo_at(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Echo_at failed. Check line numbers are valid")
     return None
 
@@ -393,6 +403,7 @@ def cmd_repeat(toks, lines, cur_line, out_lines, variables):
     except ParseError:
         raise
     except Exception:
+        logger.exception("Parsing error")
         raise ParseError("Missing or invalid numerical argument for \\r")
     toks_bkp = toks
     for n in range(num):
@@ -462,7 +473,7 @@ command_list = {'k': cmd_echo_thisline, 'skip': cmd_delnxtline,
                 'echo': cmd_echo, '+': cmd_concat,
                 "&&": cmd_and, "||": cmd_or, "!!": cmd_not,
                 "regex": cmd_assert_regex,
-                '+f': cmd_addf, '+d': cmd_addd,
+                '+f': cmd_addf, 'ftoi': cmd_ftoi,
                 '#ol': cmd_the_out_line, 'echo@': cmd_echo_at,
                 'r': cmd_repeat, 'set': cmd_set_var, 'if': cmd_if,
                 'end': cmd_endif,
@@ -497,11 +508,11 @@ def process_lines(lines, variables, comment_start='%#'):
     cur_line = 0
     while cur_line < len(lines):  # lines may change
         parsed = False
-        line = lines[cur_line]
+        line = lines[cur_line].strip()
 
-        if line.strip()[:len(comment_start)] == comment_start:
+        if line.startswith(comment_start):
             # strip comment string from line
-            line = line[line.find(comment_start)+len(comment_start):]
+            line = line[len(comment_start):]
             eq_at = line.find('=')
             if eq_at >= 0:
                 try:
@@ -518,7 +529,7 @@ def process_lines(lines, variables, comment_start='%#'):
                     print("Details: {}\n".format(e))
 
         if not parsed:
-            ret.append(line)
+            ret.append(lines[cur_line])  # print original line
         cur_line = cur_line+1
     return ret
 

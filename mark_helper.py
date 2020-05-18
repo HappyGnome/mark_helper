@@ -91,7 +91,7 @@ def print_some(data, n=10):
         print("{}".format(en[r][1]))
 
 
-def cmd_build_n_check(args):#TODO detect changes and rebuild-check etc
+def cmd_build_n_check(args):
     '''
     **CLI command:**
     Compile all marked scripts and open for the user to preview/edit, allowing
@@ -103,7 +103,7 @@ def cmd_build_n_check(args):#TODO detect changes and rebuild-check etc
                 "(separated by spaces): ")
     question_names = inp.split()
 
-    quit_flag=False
+    quit_flag = False
     while not quit_flag:
         print("Checking marking state...")
         try:
@@ -170,6 +170,7 @@ def cmd_reset_validation(args):
             loghelper.print_and_log(logger, "Warning! Failed to reset " +
                                     "validation for {}".format(tag))
     return True
+
 
 def cmd_makecsv(args):
     '''

@@ -176,14 +176,12 @@ The following commands are available. Note that a **bool** (Boolean) string is e
 `\end`|0|0|End argument of `\if` or `\r` before string results.
 `\regex`|1|1 bool|Interpret a string as a [regex](https://docs.python.org/3/library/re.html). Return true if the input line following this one contains matches to the regex. Note that escape sequences in the regex still need to be escaped in the literal token. E.g. `\regex '\\\\'` creates the regex `'\\'` so results in `'1'` if the following line contains `\`.
 `\+f`|2|1| Convert two strings to floats and add them.
-`\+d`|2|1| Convert two strings to ints and add them.
+`\ftoi`|1|1|Convert string representing a float to string representing an integer
 `\#ol`|0|1|Returns the line number for the next line of output (useful for bookmarking the current position in the output).
 `\echo@`|2|None| Add the second string to the output at line number given by the first. E.g. `\echo@ \#ol 'here'` is equivalent to `\echo 'here'`.
 `\r`|2|0 |The first string is a positive integer (`n`). The parser runs the rest of the input line (until a string results or unconsumed `\end`) `n` times and consumes the output. E.g. `\r '3' \echo 'ok' \end` adds three lines to output that each read `'ok'`.
 `\set`|2|0|Set a recognised variable. First string consumed is the variable name and the second is its value. Adds new recognised variable if name not recognised. E.g.  `\set 'myvar' 'hi'` (note that the variable name is a literal).
 `\==`|2|1 bool| Evaluates to true if two strings are identical.
-
-
 
 ### Examples
 *TODO*
