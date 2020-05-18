@@ -591,6 +591,7 @@ if __name__ == '__main__':
     with open('junk.txt', 'w') as file:
         file.writelines(["\n", "a\n", "\n", "\\b"])
     '''
-    var = {'_do': 0}
-    process_file('junk_in.txt', 'junk_out.txt', var)
+    var = {'_init': 0, '_#pages':'4','switch':'1',
+           'count':'2', 'do':'', 'fruit':'mango', 'valid':'0'}
+    process_file('junk_in.txt', 'junk_out.txt', var,'$$$')
     print(var)

@@ -107,4 +107,57 @@ Mark_helper creates source files by parsing a template file and re-parsing sourc
     * `_question_mark` : Should be set to the mark of the selected question.
 
 ## Examples
-*Comig soon...*
+### Example 1
+
+    %#_init=\r _#pages \echo 'Another page' \end  _init
+Output (when `_init`) is recognised:
+
+    Another page    
+    Another page    
+    .
+    .
+    .
+    Another page
+(`_#page` copies)
+
+**Note:** The useful commands don't evaluate to a string so we are free to choose the last token to assign to `_init`. By default we choose  `_init` itself (i.e. not changing its value unecessarily).
+
+### Example 2
+    %#switch=\if switch \k \skip \end \end switch
+    This line was kept
+Output if `switch=='0'`:
+
+    This line was kept
+
+but if `switch=='1'`, the first line is kept (`\k`) and the second is removed (`\skip`):  
+
+    %#switch=\if switch \k \skip \end \end switch
+
+### Example 3
+    %#count=\set 'text' '' \r '10' \set 'text' \+ text \+ \ftoi count ' ' \set 'count' \+f count '1' \end \echo text count
+
+Counts up 10 times from count. E.g. if `count=1` outputs:
+
+    1 2 3 4 5 6 7 8 9 10
+
+### Example 4
+    Apples:
+    %#do=\set 'applemark' \#ol do
+    Mangos:
+    Oranges:
+    %#do=\set 'orangemark' \#ol do
+    Bananas:
+    %#do=\if \== fruit 'apple' \echo@ applemark 30 \end \if \== fruit 'orange' \echo@ orangemark 30 \end \end \end do
+
+Output if `do` and `fruit` recognised and `fruit=='apple'`:
+
+    Apples:
+    30
+    Mangos:
+    Oranges:
+    Bananas:
+
+### Example 5
+    %#valid=\regex '\\\\ is a backslash.*\\]'
+    This \ is a backslash. Here is some other text []
+Results in setting the variable `value='1'`, assuming the line is executed (i.e. if `value` is recognised).

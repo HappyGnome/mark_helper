@@ -10,7 +10,7 @@
 \mpageDefaults{subgrid show=0}
 
 \begin{document}
-%#_init=\set 'loopPg' '1' \r _#pages \echo \+ '\\begin{mpage}%Page ' \+ \ftoi loopPg '\n\n\\end{mpage}' \set 'loopPg' \+f loopPg '1' _init _init
+%#_init=\set 'loopPg' '1' \r _#pages \echo \+ '\\begin{mpage}%Page ' \+ \ftoi loopPg '\n\n\\end{mpage}' \set 'loopPg' \+f loopPg '1' \end _init
 
 \mstatus%check all pages found
 \end{document}
