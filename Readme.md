@@ -186,25 +186,25 @@ The following commands are available. Note that a **bool** (Boolean) string is e
 ### Lifecycle of a source file in mark_helper
 Mark_helper creates source files by parsing a template file and re-parsing source files at various points. The lifecycle of a source file is as follows:
 1. The file is created by running the parser on a template file with the following recognised variables:
-  * `_init` : Flag (no input/output from parser - execution control only)
-  * `_#pages` : Number of pages in associated script to mark (accross all pdf files)
-  * `_in_path` : Prefix of path(s) of pdf documents for the script (E.g. '../myfile' for '../myfile.pdf', or '../myfile_1.pdf', '../myfile_2.pdf' etc.)
+    * `_init` : Flag (no input/output from parser - execution control only)
+    * `_#pages` : Number of pages in associated script to mark (accross all pdf files)
+    * `_in_path` : Prefix of path(s) of pdf documents for the script (E.g. '../myfile' for '../myfile.pdf', or '../myfile_1.pdf', '../myfile_2.pdf' etc.)
 
 2. Before a file is opened for editing/marking, for each question to be marked the parser runs on the file with the recognised variables:
-  *  `_question_reset` : Flag
-  * `_question_name` : Name (or number) of the question that will be marked
-  * `_question_prevmark` : The mark currently saved for this question, or an empty string '' if none is available.
+    *  `_question_reset` : Flag
+    * `_question_name` : Name (or number) of the question that will be marked
+    * `_question_prevmark` : The mark currently saved for this question, or an empty string '' if none is available.
 
 3. Also before a file is opened for editing/marking, if validation will occur afterwards, the parser runs with the recognised variable:
-  * `_final_assert_reset` : Flag
+    * `_final_assert_reset` : Flag
 
 4. After the editor closes, if validation mode is active, he parser runs with the recognised variables:
-  * `_final_assert` : This should be set to '1' during parsing if source file should pass validation.
+    * `_final_assert` : This should be set to '1' during parsing if source file should pass validation.
 
 5. For each question that was meant to be marked, the parser runs on the file with the recognised variables:
-  * `_question_name` : The name of the question being queried
-  * `_question_assert` : Should be set to '1' if named question is validly marked
-  * `_question_mark` : Should be set to the mark of the selected question.
+    * `_question_name` : The name of the question being queried
+    * `_question_assert` : Should be set to '1' if named question is validly marked
+    * `_question_mark` : Should be set to the mark of the selected question.
 
 ### Examples
 *Comig soon...*
