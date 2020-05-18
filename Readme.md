@@ -199,12 +199,12 @@ Mark_helper creates source files by parsing a template file and re-parsing sourc
   * `_final_assert_reset` : Flag
 
 4. After the editor closes, if validation mode is active, he parser runs with the recognised variables:
-    * `_final_assert` : This should be set to '1' during parsing if source file should pass validation.
+  * `_final_assert` : This should be set to '1' during parsing if source file should pass validation.
 
 5. For each question that was meant to be marked, the parser runs on the file with the recognised variables:
-    * `_question_name` : The name of the question being queried
-    * `_question_assert` : Should be set to '1' if named question is validly marked
-    * `_question_mark` : Should be set to the mark of the selected question.
+  * `_question_name` : The name of the question being queried
+  * `_question_assert` : Should be set to '1' if named question is validly marked
+  * `_question_mark` : Should be set to the mark of the selected question.
 
 ### Examples
-*TODO*
+*Comig soon...*
