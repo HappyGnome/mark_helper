@@ -89,11 +89,13 @@ When prompted for a configuration option you can enter a new value to change it,
 The script directory is the main option here. This is where the program will look for the script files. All directories used for source files and merging will be sub-directories of this one.
 
 ### Main options in `config marking`
-The editor option specifies the terminal command to open a source file in your prefered editor. The program will try to call `<editor> <source_file>` from the terminal, where `<source_file>` is the name of the source file to open and `<editor>` is the string you set here.
+The **editor** option specifies the terminal command to open a source file in your prefered editor. The program will try to call `<editor> <source_file>` from the terminal, where `<source_file>` is the name of the source file to open and `<editor>` is the string you set here.
 
-The template filepath specifies the template file to parse to generate each source file.
+The **template** filepath specifies the template file to parse to generate each source file.
 
-The compile command is the command that will be run on the terminal to compile your source files. Similar to the editor option. The working directory for this command will be the directory containing the source file. E.g. set this to `pdflatex` to run `pdflatex <source_file>` to compile `<source_file>`.
+The **compile** command is the command that will be run on the terminal to compile your source files. Similar to the editor option. The working directory for this command will be the directory containing the source file. E.g. set this to `pdflatex` to run `pdflatex <source_file>` to compile `<source_file>`.
 
-The source escape option allows you to change how 'active' lines begin in the template and source files.
+**N.B.** This command is expected to terminate once completed or on a failed compilation (ideally it should return non-zero on a failed compilation, too). For example if using MiKTeX or TeXLive, set compile command to   `pdflatex -halt-on-error` or `pdflatex -halt-on-error -interaction=nonstopmode` (to quit with an error rather than blocking if package missing).
+
+The **source escape** option allows you to change how 'active' lines begin in the template and source files.
 An 'active' line is one to be parsed and should use the syntax defined in [Template scripting](Template_scripting.md). Default is '%#' as these are already comment lines in TeX.
