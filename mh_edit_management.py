@@ -8,6 +8,7 @@ Methods involving creating and editing marked documents
 """
 import os
 import subprocess as sp
+import shlex
 
 import logging
 
@@ -177,6 +178,22 @@ def ready_source_file(filepath, tag, to_mark, cfg):
                                     .format(filepath))
 
 
+def open_one_to_edit(cfg, sourcefile):
+    '''
+    Run editor specified in `cfg` on selected sourcefile.
+    Block until editor closes
+    '''
+    try:
+        proc = sp.Popen([cfg.editor(),
+                         sourcefile])
+        proc.wait()
+    except Exception:
+        loghelper.print_and_log(logger,
+                                "Error occurred editing document." +
+                                " Check that the correct appliction is" +
+                                " selected.")
+
+
 def make_user_mark(tag, to_mark, cfg, questions=None,
                    final_validate_source=True, final_validate_output=False):
     '''
@@ -256,14 +273,7 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
     except OSError:
         pass  # old_edit_epoch=-1 already signifies it's not valid
     try:
-        proc = sp.Popen([cfg.editor(),
-                         sourcefile])
-        proc.wait()
-    except Exception:
-        loghelper.print_and_log(logger,
-                                "Error occurred editing document." +
-                                " Check that the correct appliction is" +
-                                " selected.")
+        open_one_to_edit(cfg, sourcefile)
     # check state of resulting file
     # (must be called as counterpart to each reset)
     finally:
@@ -326,12 +336,28 @@ def make_user_mark(tag, to_mark, cfg, questions=None,
         return ret
 
 
-def batch_compile(directory, files, compile_command):
+def batch_compile(directory, files, compile_command, **kwargs):
     '''
     Runs string `compile_command` in terminal in the given `directory` for each
     source file listed in `files`
+
+    Parameters
+    ----------
+    `directory` : directory in which to run compiler
+
+    `files` : list of file paths to compile (relative to `directory`)
+
+    `compile_command` : command line command to which file paths will be
+    appended. shlex will be run on this argument to generate command line
+    tokens
+
+    `kwargs` :  Options are `cfg` - MarkingConfig for current job
+    `manual_fallback` - if True `cfg` must be given
+    user will be prompted to manually compile any files that
+    failed
     '''
     here = ".."
+    fail_list = []  # list of files that did not compile
     try:
         here = os.getcwd()
         os.chdir(directory)
@@ -340,14 +366,26 @@ def batch_compile(directory, files, compile_command):
                 print("\rCompiling: {}/{}. ".format(i+1, len(files)), end='\r')
                 # print(directory)#debug
                 # print([compile_command,s])
-                sp.run([compile_command, s], check=True)
+                cmd_toks=shlex.split(compile_command)
+                cmd_toks.append(s)
+                sp.run(cmd_toks, check=True)
 
             except sp.CalledProcessError:
                 # raise#debug
-                print("Compilation failed for {}. Continuing...".format(s))
+                fail_list.append(s)
+                loghelper.print_and_log(logger,
+                                        "Compilation failed for {}.".format(s)
+                                        + " Continuing...")
     finally:
         print('')  # newline to break from progress bar
         os.chdir(here)
+    go_manual=kwargs.get('manual_fallback',False)
+    if go_manual:
+        print("There are {} files to compile manually.".format(len(fail_list)))
+        for s in fail_list:
+            open_one_to_edit(kwargs['cfg'],os.path.join(directory,s))
+            if input("Continue compiling? (\'q\' to quit): ") in ["q","Q"]:
+                break
 
 
 def batch_check_exist(directory, files):
@@ -403,7 +441,8 @@ def batch_compile_and_check(directory, tags, cfg, comp_if_output_exists=True):
         tags = newtags
     source_filelist = [tag + cfg.marked_suffix() for tag in tags]
     output_filelist = [tag + cfg.output_suffix() for tag in tags]
-    batch_compile(directory, source_filelist, cfg.compile_command())
+    batch_compile(directory, source_filelist, cfg.compile_command(),
+                  cfg=cfg, manual_fallback=True)
     batch_check_exist(directory, output_filelist)
 
 
