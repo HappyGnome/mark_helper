@@ -50,7 +50,6 @@ If you are happy with the preview of a script file simply close the editor. If y
 Note that saving or compiling a file will be detected and you will be prompted to re-check it later.
 
 ### Merging output (`makemerged`)
-*EXPERIMENTAL*
 
 Some features present in the script file may be stripped out by the marking process\*. E.g. if marking with LaTeX and pdfpages then annotations from other markers ay have been removed. To circumvent this, then `makemerged` function is used to extract your modifications to the script and add them back over the original.
 
