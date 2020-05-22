@@ -71,6 +71,7 @@ def cmd_begin(args):
             print("Precompiling successful!")
         except Exception:
             loghelper.print_and_log(logger, "Precompiling failed!")
+            return True
         for tag in to_mark:
             print("Now marking " + tag)
             quit_flag = not mhem.mark_one_loop(tag, to_mark, g_config,

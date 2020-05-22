@@ -366,7 +366,7 @@ def batch_compile(directory, files, compile_command, **kwargs):
                 print("\rCompiling: {}/{}. ".format(i+1, len(files)), end='\r')
                 # print(directory)#debug
                 # print([compile_command,s])
-                cmd_toks=shlex.split(compile_command)
+                cmd_toks = shlex.split(compile_command)
                 cmd_toks.append(s)
                 sp.run(cmd_toks, check=True)
 
@@ -379,12 +379,12 @@ def batch_compile(directory, files, compile_command, **kwargs):
     finally:
         print('')  # newline to break from progress bar
         os.chdir(here)
-    go_manual=kwargs.get('manual_fallback',False)
+    go_manual = kwargs.get('manual_fallback', False)
     if go_manual:
         print("There are {} files to compile manually.".format(len(fail_list)))
         for s in fail_list:
-            open_one_to_edit(kwargs['cfg'],os.path.join(directory,s))
-            if input("Continue compiling? (\'q\' to quit): ") in ["q","Q"]:
+            open_one_to_edit(kwargs['cfg'], os.path.join(directory, s))
+            if input("Continue compiling? (\'q\' to quit): ") in ["q", "Q"]:
                 break
 
 

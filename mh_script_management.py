@@ -9,6 +9,7 @@ Methods involving tracking marking progress, and script files
 import os
 import json
 import logging
+import re
 
 import PyPDF2 as ppdf
 
@@ -117,10 +118,10 @@ class MarkingConfig(config.Config):
         Returns marking/compile command property
         '''
         return self._categories["marking"]["compile command"]
-    
+
     def source_escape(self):
         '''
-        Returns escape string used to start \'active comment\' lines in source 
+        Returns escape string used to start \'active comment\' lines in source
         files
         '''
         return self._categories["marking"]["source escape"]
@@ -212,6 +213,10 @@ def get_script_list(cfg):
 
     # add file names to list, accounting for doc numbers
     for scr in script_files_pdf:
+        if len(re.findall(r"\s", scr)) > 0:
+            loghelper.print_and_log(logger, "Warning: filename " +
+                                    "\'{}\'".format(scr) +
+                                    " contains whitespace.")
         tag = scr  # default tag in to_mark
         sep_ind = scr.rfind(cfg.numsep())  # look for trailing number
         if sep_ind > 0:  # sep found in valid place
