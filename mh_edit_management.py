@@ -364,18 +364,16 @@ def batch_compile(directory, files, compile_command, **kwargs):
         for i, s in enumerate(files):  # compile examples
             try:
                 print("\rCompiling: {}/{}. ".format(i+1, len(files)), end='\r')
-                # print(directory)#debug
-                # print([compile_command,s])
                 cmd_toks = shlex.split(compile_command)
                 cmd_toks.append(s)
-                sp.run(cmd_toks, check=True)
+                sp.run(cmd_toks, check=True, stdin=sp.PIPE, stdout=sp.PIPE,
+                       stderr=sp.PIPE)
 
             except sp.CalledProcessError:
-                # raise#debug
                 fail_list.append(s)
                 loghelper.print_and_log(logger,
-                                        "Compilation failed for {}.".format(s)
-                                        + " Continuing...")
+                                        "Compilation failed for {}.".format(s))
+                print(" Continuing...")
     finally:
         print('')  # newline to break from progress bar
         os.chdir(here)
